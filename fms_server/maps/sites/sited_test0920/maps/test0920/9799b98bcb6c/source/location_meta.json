@@ -1,0 +1,17 @@
+{
+    "locations": [
+        {
+            "map": "641931de9eae7cecb34d5765",
+            "marker_id": 38,
+            "name": "SCHAE38",
+            "pose": [
+                -0.10625000298023224,
+                2.059375047683716,
+                4.710000038146973
+            ],
+            "type": "station",
+            "unique_id": "641932ff9eae7cecb34d5a4b"
+        }
+    ],
+    "name": "641931de9eae7cecb34d5765"
+}

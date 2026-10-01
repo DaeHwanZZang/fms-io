@@ -1,0 +1,18 @@
+# FMS 서버 (fms_server/) + 공용 모듈 (common/) 의존성
+# AMR_client / AMR_viewer / MQTT_broker 는 각자 자기 폴더에서 관리한다.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.6
+python-multipart>=0.0.9   # fastapi 멀티파트 업로드 (맵 업로드)
+
+# 로봇 통신
+paho-mqtt>=2.1
+
+# 맵 처리 (occupancy grid PNG 읽기, zone 굽기)
+Pillow>=10.0
+numpy>=1.26
+
+# 테스트
+pytest>=8.0
+httpx>=0.27          # fastapi.testclient (WebSocket 테스트 포함)

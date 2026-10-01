@@ -1,0 +1,11 @@
+{
+  "name": "3ad454722d1ed4aef5f4d457",
+  "image": "navi_gridmap.baked.png",
+  "resolution": 0.03125,
+  "origin_x": -21.128462,
+  "origin_y": -12.84741,
+  "width_px": 2347,
+  "height_px": 1687,
+  "occupied_thresh": 64,
+  "free_thresh": 192
+}

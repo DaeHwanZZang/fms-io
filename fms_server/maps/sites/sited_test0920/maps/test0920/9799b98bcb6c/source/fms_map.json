@@ -1,0 +1,11 @@
+{
+  "name": "sample_map1",
+  "image": "edited_navi_gridmap.png",
+  "resolution": 0.03125,
+  "origin_x": -21.128462,
+  "origin_y": -12.84741,
+  "width_px": 2347,
+  "height_px": 1687,
+  "occupied_thresh": 64,
+  "free_thresh": 192
+}

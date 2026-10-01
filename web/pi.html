@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raspberry Pi Simulator</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="common.js"></script>
+<style>
+  :root {
+    --bg:#f4f5f7; --panel:#fff; --text:#1c2330; --muted:#6b7385; --line:#e2e5ec;
+    --ok:#1a9a4b; --warn:#d99100; --bad:#d13438; --info:#2563eb; --board:#e8f3ea; --board-line:#9cc5a6;
+    --dev:#f0f2f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151b; --panel:#1b2029; --text:#e6e9ef; --muted:#8f98aa; --line:#2b3240;
+            --board:#17261c; --board-line:#2f5a3b; --dev:#252b37; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif; }
+  header { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+           padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0 auto 0 0; }
+  .badge { padding:2px 10px; border-radius:99px; font-size:12px; border:1px solid var(--line); color:var(--muted); }
+  .badge.on { color:var(--ok); border-color:var(--ok); }
+  .badge.off { color:var(--bad); border-color:var(--bad); }
+  button { font:inherit; padding:4px 10px; border-radius:6px; border:1px solid var(--line);
+           background:var(--panel); color:var(--text); cursor:pointer; }
+  button:disabled { opacity:.4; cursor:default; }
+  button.active { background:var(--info); color:#fff; border-color:var(--info); }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:12px; padding:12px; }
+  @media (max-width:1000px) { main { grid-template-columns:1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  h2 { font-size:13px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+  aside { display:flex; flex-direction:column; gap:12px; min-width:0; }
+
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:-apple-system,"Apple SD Gothic Neo",sans-serif; fill:var(--text); }
+  svg .muted { fill:var(--muted); }
+  .board { fill:var(--board); stroke:var(--board-line); stroke-width:2; }
+  .dev { fill:var(--dev); stroke:var(--line); stroke-width:1.5; }
+  .wire { fill:none; stroke:var(--muted); stroke-width:2; opacity:.6; transition:stroke .15s; }
+  .wire.hot { stroke:var(--ok); stroke-width:3.5; opacity:1; }
+  .wdot { fill:var(--muted); } .wdot.hot { fill:var(--ok); }
+  .gndrail, .gndwire { fill:none; stroke:var(--muted); stroke-width:2; opacity:.5; }
+  .gndwire { stroke-dasharray:5 4; stroke-width:1.5; } .gnddot { fill:var(--muted); opacity:.6; }
+  .term { fill:var(--panel); stroke:var(--muted); stroke-width:2; }
+  .term.hi { fill:var(--ok); stroke:var(--ok); }
+  .lvbg { fill:var(--line); } .lvbg.hi { fill:var(--ok); }
+  svg .lvtx { fill:var(--muted); font-size:11px; font-weight:700; text-anchor:middle; } svg .lvtx.hi { fill:#fff; }
+  svg .state { fill:var(--muted); } svg .state.on { fill:var(--text); font-weight:700; }
+  .btnbase { fill:none; stroke:var(--line); stroke-width:4; }
+  .lamp { fill:var(--line); stroke:var(--muted); stroke-width:1.5; }
+  .lamp.red.on { fill:#e5484d; stroke:#e5484d; filter:drop-shadow(0 0 8px #e5484d); }
+  .lamp.yellow.on { fill:#f5a300; stroke:#f5a300; filter:drop-shadow(0 0 8px #f5a300); }
+  .lamp.green.on { fill:#2fb35d; stroke:#2fb35d; filter:drop-shadow(0 0 8px #2fb35d); }
+  .buz { fill:var(--dev); stroke:var(--muted); stroke-width:2; }
+  .buz.on { fill:#ffe9bf; stroke:#f5a300; filter:drop-shadow(0 0 6px #f5a300); }
+  .wave { fill:none; stroke:#f5a300; stroke-width:3; stroke-linecap:round; }
+  .wave[hidden] { display:none; }
+  .cap { fill:#d13438; stroke:#7a1a1d; stroke-width:2; cursor:pointer; touch-action:none; transition:r .08s; }
+  .cap.down { fill:#8f2326; }
+
+  /* 40핀 헤더 */
+  .hdrcard { margin-top:14px; padding-top:10px; border-top:1px solid var(--line); }
+  .hdr { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 26px 26px minmax(0,1fr); gap:3px 8px;
+         max-width:560px; margin:6px auto 0; align-items:center; }
+  .hdr .body { grid-column:2 / 4; grid-row:1 / 21; background:#20242c; border-radius:6px; margin:-4px -3px; }
+  .hdr .lbl { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hdr .lbl.l { text-align:right; } .hdr .lbl.r { text-align:left; }
+  .hdr .lbl.used { color:var(--text); font-weight:600; }
+  .hdr .lbl .lv { margin-left:6px; font-size:11px; }
+  .pin { position:relative; z-index:1; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+         font:600 10.5px ui-monospace,Menlo,monospace; color:#9aa1b0; background:#3a404c; }
+  .pin.used { background:var(--info); color:#fff; }
+  .pin.used.hi { background:var(--ok); }
+  .legend { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:10px; font-size:11.5px; color:var(--muted); }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
+  .ctl { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .ctl .grp { display:flex; gap:6px; align-items:center; border:1px solid var(--line); border-radius:8px; padding:4px 8px; }
+  .ctl .grp b { font-size:12px; color:var(--muted); font-weight:600; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th { text-align:left; color:var(--muted); font-weight:600; padding:2px 6px; }
+  td { padding:3px 6px; border-top:1px solid var(--line); vertical-align:top; }
+  td.t { color:var(--muted); white-space:nowrap; width:1%; }
+  tr.alarm td { color:var(--bad); }
+  tr.reject td { color:var(--warn); }
+  .lv { font-family:ui-monospace,Menlo,monospace; }
+  .lv.hi { color:var(--ok); font-weight:700; }
+  .flag { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-top:1px solid var(--line); }
+  .flag small { display:block; color:var(--muted); }
+  .logbox { max-height:260px; overflow:auto; }
+  .note { color:var(--muted); font-size:12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Raspberry Pi Simulator</h1>
+  <span id="b-io" class="badge off">Server offline</span>
+  <span id="b-mock" class="badge" hidden>MOCK GPIO</span>
+  <span id="b-fms" class="badge">FMS uplink -</span>
+</header>
+<main>
+  <section>
+    <h2>Wiring and live state (BCM numbering)</h2>
+    <svg id="diagram" viewBox="0 0 880 470" role="img" aria-label="Raspberry Pi wiring diagram">
+      <!-- 라즈베리파이: 왼쪽 터미널 = GPIO 핀 -->
+      <rect class="board" x="10" y="10" width="250" height="450" rx="14"/>
+      <text x="26" y="36" font-size="15" font-weight="700">Raspberry Pi</text>
+      <text class="muted" x="26" y="53" font-size="11.5">GPIO pins (BCM numbering)</text>
+      <g id="terms"></g>
+
+      <!-- 공통 GND 레일: 모든 장치가 연결된다 -->
+      <line class="gndrail" x1="820" y1="40" x2="820" y2="440"/>
+      <text class="muted" x="820" y="30" text-anchor="middle" font-size="11">GND</text>
+      <path class="gndrail" d="M808,444 h24 M812,451 h16 M816,458 h8"/>
+      <path class="gndwire" d="M760,155 H820 M760,325 H820 M760,410 H820"/>
+      <circle class="gnddot" cx="820" cy="155" r="3.5"/><circle class="gnddot" cx="820" cy="325" r="3.5"/><circle class="gnddot" cx="820" cy="410" r="3.5"/>
+
+      <g id="wires"></g>
+
+      <!-- 경광등 -->
+      <rect class="dev" x="560" y="14" width="200" height="266" rx="12"/>
+      <text class="muted" x="576" y="32" font-size="12">Signal tower</text>
+      <circle class="lamp red" id="d-lamp_red" cx="600" cy="70" r="22"/>
+      <circle class="lamp yellow" id="d-lamp_yellow" cx="600" cy="155" r="22"/>
+      <circle class="lamp green" id="d-lamp_green" cx="600" cy="240" r="22"/>
+      <text x="650" y="66" font-size="13" font-weight="700">Red</text><text class="state" id="t-lamp_red" x="650" y="84" font-size="12"></text>
+      <text x="650" y="151" font-size="13" font-weight="700">Yellow</text><text class="state" id="t-lamp_yellow" x="650" y="169" font-size="12"></text>
+      <text x="650" y="236" font-size="13" font-weight="700">Green</text><text class="state" id="t-lamp_green" x="650" y="254" font-size="12"></text>
+
+      <!-- 부저 -->
+      <rect class="dev" x="560" y="290" width="200" height="70" rx="12"/>
+      <circle class="buz" id="d-buzzer" cx="600" cy="325" r="22"/>
+      <circle cx="600" cy="325" r="5" fill="var(--muted)"/>
+      <path class="wave" id="wave1" d="M628,317 q7,8 0,16" hidden/>
+      <path class="wave" id="wave2" d="M635,311 q11,14 0,28" hidden/>
+      <text x="650" y="321" font-size="13" font-weight="700">Buzzer</text><text class="state" id="t-buzzer" x="650" y="339" font-size="12"></text>
+
+      <!-- 푸시 버튼 -->
+      <rect class="dev" x="560" y="375" width="200" height="70" rx="12"/>
+      <circle class="btnbase" cx="600" cy="410" r="25"/>
+      <circle class="cap" id="d-button" cx="600" cy="410" r="19"/>
+      <text x="650" y="406" font-size="13" font-weight="700">Push button</text><text class="state" id="t-button" x="650" y="424" font-size="12"></text>
+    </svg>
+    <div class="ctl">
+      <div class="grp"><b>Buzzer</b><button id="c-buz">-</button></div>
+      <div class="grp"><b>World</b>
+        <button id="c-btn" title="Hold to press">Hold to press button</button></div>
+      <div class="grp"><b>Signal tower</b><button data-lamp="red">Red</button><button data-lamp="yellow">Yellow</button><button data-lamp="green">Green</button>
+        <button data-lamp="">Off</button></div>
+    </div>
+    <p class="note">The Pi has no automatic rules: every output (tower lamps, buzzer) is controlled by FMS job "Pin" steps. The buttons here are only for manual testing. One tower color is lit at a time. The push button is a simulated "world" input: it changes the input pin level and goes through the same edge-callback path as a real sensor, and its state is reported to FMS.</p>
+
+    <div class="hdrcard">
+      <h2>Raspberry Pi 40-pin header</h2>
+      <div class="hdr" id="header40"></div>
+      <div class="legend">
+        <span><i style="background:#3a404c"></i>Unused</span><span><i style="background:var(--info)"></i>In use (LOW)</span><span><i style="background:var(--ok)"></i>In use (HIGH)</span>
+      </div>
+    </div>
+  </section>
+
+  <aside>
+    <section>
+      <h2>Pin map</h2>
+      <table><thead><tr><th>Device</th><th>BCM</th><th>Pin</th><th>Dir</th><th>Level</th><th>State</th></tr></thead>
+        <tbody id="pins"></tbody></table>
+    </section>
+    <section>
+      <h2>Sent to FMS (PUT /api/v1/flags/&lt;name&gt;)</h2>
+      <div id="flags"></div>
+      <div class="note" id="uplink" style="margin-top:6px"></div>
+      <div class="note">Use these names in the FMS "Create job" panel (Wait flag).</div>
+    </section>
+    <section>
+      <h2>Event log</h2>
+      <div class="logbox"><table><tbody id="log"></tbody></table></div>
+    </section>
+  </aside>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const NS = "http://www.w3.org/2000/svg";
+// 이 서버(io_server)가 직접 서빙한 페이지면 접속한 주소를 그대로 쓴다 (라즈베리파이 IP 로 열어도 동작)
+const PI_URL = location.pathname.startsWith("/ui/") ? SERVER_URL : location.origin;
+const sock = io(PI_URL, { reconnectionDelayMax: 5000 });
+
+let built = false, last = null;
+
+function mk(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// 설정(핀 배치)은 서버가 보내준 io_status 의 devices 를 그대로 그린다 (io_config.py 가 원본).
+function build(devs) {
+  const terms = $("#terms"), wires = $("#wires");
+  devs.forEach((d, i) => {
+    const y = 70 + i * 85;   // 터미널과 장치 카드가 같은 높이라 전선이 수평이다 (pi.html 도식과 좌표를 맞춘다)
+    terms.append(mk("text", { x: 24, y: y - 8, "font-size": 13, "font-weight": 700 }, d.label));
+    terms.append(mk("text", { x: 24, y: y + 10, "font-size": 11.5, class: "muted" }, `GPIO${d.bcm} · pin ${d.board} · ${d.dir === "out" ? "output" : "input"}`));
+    terms.append(mk("rect", { id: "lvbg-" + d.name, class: "lvbg", x: 196, y: y - 11, width: 50, height: 22, rx: 11 }));
+    terms.append(mk("text", { id: "lvt-" + d.name, class: "lvtx", x: 221, y: y + 4 }, ""));
+    terms.append(mk("circle", { id: "term-" + d.name, class: "term", cx: 260, cy: y, r: 7 }));
+    wires.append(mk("path", { id: "wire-" + d.name, class: "wire", d: `M260,${y} H560` }));
+    wires.append(mk("circle", { id: "wdot-" + d.name, class: "wdot", cx: 560, cy: y, r: 4 }));
+    wires.append(mk("text", { class: "muted", x: 410, y: y - 7, "text-anchor": "middle", "font-size": 11 }, `GPIO${d.bcm}`));
+  });
+  buildHeader(devs);
+  $("#pins").innerHTML = devs.map((d) => `<tr><td>${esc(d.label)}</td><td>${d.bcm}</td><td>${d.board}</td><td>${d.dir.toUpperCase()}</td>
+      <td class="lv" id="pl-${d.name}"></td><td id="ps-${d.name}"></td></tr>`).join("");
+  built = true;
+}
+
+// 물리 핀 1~40 이름 (Raspberry Pi 40-pin 표준 배열: 홀수 = 왼쪽 열, 짝수 = 오른쪽 열)
+const PIN_NAMES = ["3V3","5V","GPIO2","5V","GPIO3","GND","GPIO4","GPIO14","GND","GPIO15","GPIO17","GPIO18","GPIO27","GND","GPIO22","GPIO23",
+  "3V3","GPIO24","GPIO10","GND","GPIO9","GPIO25","GPIO11","GPIO8","GND","GPIO7","ID_SD","ID_SC","GPIO5","GND","GPIO6","GPIO12","GPIO13","GND",
+  "GPIO19","GPIO16","GPIO26","GPIO20","GND","GPIO21"];
+// 설정에 쓰인 핀은 파란색(HIGH 면 초록)으로 강조하고 장치 이름과 레벨(HIGH/LOW)을 붙인다. 나머지는 모두 회색.
+function buildHeader(devs) {
+  const byBoard = new Map(devs.map((d) => [d.board, d]));
+  const root = $("#header40");
+  root.innerHTML = '<div class="body"></div>';
+  const row = (p) => {   // p: 물리 핀 번호
+    const name = PIN_NAMES[p - 1], u = byBoard.get(p);
+    const pin = document.createElement("div");
+    pin.className = "pin" + (u ? " used" : "");
+    pin.id = "hp-" + p; pin.textContent = p;
+    pin.title = u ? `Pin ${p} = ${name} (BCM${u.bcm}) → ${u.label}` : `Pin ${p} = ${name}`;
+    const lbl = document.createElement("div");
+    lbl.className = "lbl " + (p % 2 ? "l" : "r") + (u ? " used" : "");
+    lbl.title = pin.title;
+    lbl.innerHTML = u ? `${esc(name)} · ${esc(u.label)}<span class="lv" id="hl-${p}"></span>` : esc(name);
+    return [pin, lbl];
+  };
+  for (let r = 0; r < 20; r++) {
+    const [lp, ll] = row(2 * r + 1), [rp, rl] = row(2 * r + 2);
+    ll.style.gridColumn = 1; lp.style.gridColumn = 2; rp.style.gridColumn = 3; rl.style.gridColumn = 4;
+    [ll, lp, rp, rl].forEach((e) => { e.style.gridRow = r + 1; root.append(e); });
+  }
+}
+function updateHeader(devs) {
+  for (const d of devs) {
+    const pin = $("#hp-" + d.board), lv = $("#hl-" + d.board);
+    if (pin) pin.classList.toggle("hi", !!d.level);
+    if (lv) { lv.textContent = d.level ? "HIGH" : "LOW"; lv.className = "lv" + (d.level ? " hi" : ""); }
+  }
+}
+
+const STATE_TXT = {
+  lamp: (d) => (d.logical ? "ON" : "off"),
+  buzzer: (d) => (d.logical ? "SOUNDING" : "off"),
+  button: (d) => (d.logical ? "PRESSED" : "released"),
+};
+
+function apply(st) {
+  last = st;
+  if (!built) build(st.devices);
+  $("#b-mock").hidden = !st.mock;
+  // 실물 모드: 버튼은 실제 센서가 만든다 — 시뮬레이션 조작은 막는다
+  $("#c-btn").disabled = !st.mock;
+  $("#d-button").style.pointerEvents = st.mock ? "" : "none";
+  updateHeader(st.devices);
+  const by = {};
+  for (const d of st.devices) {
+    by[d.name] = d;
+    const stateTxt = (STATE_TXT[d.kind] || (() => ""))(d);
+    $("#term-" + d.name).setAttribute("class", "term" + (d.level ? " hi" : ""));
+    $("#lvbg-" + d.name).setAttribute("class", "lvbg" + (d.level ? " hi" : ""));
+    const lt = $("#lvt-" + d.name); lt.textContent = d.level ? "HIGH" : "LOW"; lt.setAttribute("class", "lvtx" + (d.level ? " hi" : ""));
+    // 전선은 논리적으로 "활성"일 때만 강조한다 (버튼은 눌렸을 때, 출력은 켜졌을 때)
+    $("#wire-" + d.name).setAttribute("class", "wire" + (d.logical ? " hot" : ""));
+    $("#wdot-" + d.name).setAttribute("class", "wdot" + (d.logical ? " hot" : ""));
+    const stx = $("#t-" + d.name); stx.textContent = stateTxt; stx.setAttribute("class", "state" + (d.logical ? " on" : ""));
+    const lv = $("#pl-" + d.name); lv.textContent = d.level ? "HIGH" : "LOW"; lv.className = "lv" + (d.level ? " hi" : "");
+    $("#ps-" + d.name).textContent = stateTxt + (d.active_low ? " (active-low)" : "");
+  }
+  for (const c of ["red", "yellow", "green"]) $("#d-lamp_" + c).setAttribute("class", `lamp ${c}` + (by["lamp_" + c].logical ? " on" : ""));
+  const buz = by.buzzer.logical;
+  $("#d-buzzer").setAttribute("class", "buz" + (buz ? " on" : ""));
+  $("#wave1").hidden = $("#wave2").hidden = !buz;
+  $("#d-button").setAttribute("class", "cap" + (by.button.logical ? " down" : ""));
+  $("#d-button").setAttribute("r", by.button.logical ? 16 : 19);
+
+  $("#c-buz").textContent = buz ? "ON (click to turn off)" : "OFF (click to turn on)";
+  $("#c-buz").className = buz ? "active" : "";
+
+  $("#flags").innerHTML = Object.entries(st.flags).map(([n, v]) =>
+    `<div class="flag"><span><b>${esc(n)}</b><small>${esc(st.flag_info[n] || "")}</small></span>
+     <span class="badge ${v ? "off" : "on"}">${v ? "raised" : "lowered"}</span></div>`).join("");
+  const u = st.uplink, f = $("#b-fms");
+  if (u.ok === null) { f.textContent = "FMS uplink -"; f.className = "badge"; }
+  else { f.textContent = u.ok ? "FMS uplink OK" : "FMS uplink failed"; f.className = "badge " + (u.ok ? "on" : "off"); }
+  $("#uplink").textContent = `Target ${u.url}` + (u.error ? ` — ${u.error}` : "") +
+    (u.last_sent ? ` — last sent ${new Date(u.last_sent * 1000).toLocaleTimeString("en-GB")}` : "");
+}
+
+function addLog(e) {
+  const tr = document.createElement("tr");
+  if (e.type === "alarm" || e.type === "reject") tr.className = e.type;
+  const t = e.ts ? new Date(e.ts).toLocaleTimeString("en-GB") : new Date().toLocaleTimeString("en-GB");
+  tr.innerHTML = `<td class="t">${t}</td><td>${esc(e.message)}</td>`;
+  const body = $("#log"); body.prepend(tr);
+  while (body.children.length > 200) body.lastChild.remove();
+}
+
+sock.on("connect", () => { $("#b-io").textContent = "Server connected"; $("#b-io").className = "badge on"; sock.emit("get_io_status"); });
+sock.on("disconnect", () => { $("#b-io").textContent = "Server offline"; $("#b-io").className = "badge off"; });
+sock.on("io_status", apply);
+sock.on("io_event", addLog);
+sock.on("log_history", (list) => { $("#log").innerHTML = ""; list.forEach(addLog); });
+
+// ---- 조작 -----------------------------------------------------------------
+$("#c-buz").onclick = () => last && sock.emit("output_control", { name: "buzzer", value: last.devices.find((d) => d.name === "buzzer").logical ? 0 : 1 });
+document.querySelectorAll("[data-lamp]").forEach((b) => {
+  b.onclick = () => {
+    const color = b.dataset.lamp;
+    if (color) sock.emit("output_control", { name: "lamp_" + color, value: 1 });
+    else ["red", "yellow", "green"].forEach((c) => sock.emit("output_control", { name: "lamp_" + c, value: 0 }));
+  };
+});
+// 푸시 버튼: 누르고 있는 동안만 눌림 (도식의 버튼 캡과 하단 버튼 둘 다)
+function holdable(el) {
+  const press = (v) => sock.emit("sim_input", { name: "button", value: v });
+  el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); press(true); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) => el.addEventListener(ev, () => press(false)));
+}
+holdable($("#d-button")); holdable($("#c-btn"));
+</script>
+</body>
+</html>

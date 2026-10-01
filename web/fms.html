@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FMS Control Dashboard</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="common.js"></script>
+<style>
+  :root {
+    --bg:#f4f5f7; --panel:#fff; --text:#1c2330; --muted:#6b7385; --line:#e2e5ec;
+    --ok:#1a9a4b; --warn:#d99100; --bad:#d13438; --info:#2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151b; --panel:#1b2029; --text:#e6e9ef; --muted:#8f98aa; --line:#2b3240; }
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--text); display:flex; flex-direction:column;
+         font:14px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif; }
+  header { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+           padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0 auto 0 0; }
+  .badge { padding:2px 10px; border-radius:99px; font-size:12px; border:1px solid var(--line); color:var(--muted); }
+  .badge.on { color:var(--ok); border-color:var(--ok); }
+  .badge.off { color:var(--bad); border-color:var(--bad); }
+  select, button { font:inherit; padding:4px 10px; border-radius:6px; border:1px solid var(--line);
+                   background:var(--panel); color:var(--text); }
+  button { cursor:pointer; } button:disabled { opacity:.4; cursor:default; }
+  main { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:12px; padding:12px; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; grid-auto-rows:minmax(420px,auto); } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; min-height:0; }
+  h2 { font-size:13px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+
+  /* 지도 */
+  .mapwrap { position:relative; padding:0; overflow:hidden; }
+  #map { width:100%; height:100%; display:block; cursor:grab; touch-action:none; background:#9aa0a6; }
+  #map.drag { cursor:grabbing; }
+  .toolbar { position:absolute; top:8px; left:8px; display:flex; gap:6px; flex-wrap:wrap;
+             background:color-mix(in srgb, var(--panel) 88%, transparent); padding:6px 8px;
+             border:1px solid var(--line); border-radius:8px; font-size:12px; }
+  .toolbar label { display:flex; align-items:center; gap:3px; cursor:pointer; }
+  .hud { position:absolute; left:8px; bottom:8px; font:12px ui-monospace,Menlo,monospace; padding:3px 8px;
+         background:color-mix(in srgb, var(--panel) 88%, transparent); border:1px solid var(--line); border-radius:6px; }
+  .msg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+         padding:24px; color:#fff; background:rgba(20,24,32,.55); pointer-events:none; white-space:pre-line; }
+  .msg[hidden] { display:none; }   /* display:flex 가 hidden 속성을 이겨서 빈 오버레이가 맵을 덮던 문제 */
+
+  /* 사이드 */
+  aside { display:flex; flex-direction:column; gap:12px; min-height:0; overflow:auto; }
+  .robot { border:1px solid var(--line); border-left:5px solid var(--muted); border-radius:8px; padding:8px 10px;
+           margin-bottom:8px; cursor:pointer; }
+  .robot.sel { outline:2px solid var(--info); }
+  .robot.dead { opacity:.55; }
+  .robot.EMERGENCY, .robot.ERROR { border-left-color:var(--bad); }
+  .robot .top { display:flex; justify-content:space-between; align-items:center; gap:6px; font-weight:700; }
+  .robot .top .st { font-weight:500; font-size:12.5px; margin-left:auto; }
+  .fbtn { padding:1px 8px; font-size:12px; white-space:nowrap; }
+  .robot .row { display:flex; justify-content:space-between; color:var(--muted); font-size:12.5px; }
+  .robot .row b { color:var(--text); font-weight:500; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+  .bar { height:5px; background:var(--line); border-radius:3px; margin:4px 0; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--ok); } .bar i.low { background:var(--bad); }
+  .empty { color:var(--muted); padding:6px 0; }
+  .lamps { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .lamp { width:24px; height:24px; border-radius:50%; background:var(--line); }
+  .lamp.red.on { background:var(--bad); box-shadow:0 0 12px var(--bad); }
+  .lamp.yellow.on { background:var(--warn); box-shadow:0 0 12px var(--warn); }
+  .lamp.green.on { background:var(--ok); box-shadow:0 0 12px var(--ok); }
+  .io { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; }
+  .io div { border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:12.5px; }
+  .io div.on { border-color:var(--warn); color:var(--warn); font-weight:600; }
+  .io div.alarm.on { border-color:var(--bad); color:var(--bad); }
+  .logbox { max-height:220px; overflow:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  td { padding:2px 6px; border-top:1px solid var(--line); vertical-align:top; }
+  td.t { color:var(--muted); white-space:nowrap; width:1%; }
+  tr.alarm td { color:var(--bad); }
+  /* 작업(job) 패널 */
+  .fld { display:flex; gap:6px; align-items:center; margin:4px 0; }
+  aside > section { flex-shrink:0; }   /* min-height:0 때문에 패널이 늘어나면 서로 눌려 겹치던 문제. 넘치면 aside 가 스크롤 */
+  .fld label { color:var(--muted); font-size:12.5px; min-width:44px; white-space:nowrap; }
+  .btns button { white-space:nowrap; }
+  .fld input, .fld select { flex:1; min-width:0; font:inherit; padding:3px 6px; border-radius:6px;
+                            border:1px solid var(--line); background:var(--panel); color:var(--text); }
+  .chk { display:flex; align-items:center; gap:6px; font-size:12.5px; margin:4px 0; cursor:pointer; }
+  .btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  button.primary { background:var(--info); color:#fff; border-color:var(--info); }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0; }
+  .chip { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:99px;
+          padding:1px 4px 1px 10px; font-size:12.5px; cursor:pointer; }
+  .chip.on { background:var(--info); color:#fff; border-color:var(--info); }
+  .chip .x { padding:0 5px; opacity:.7; }
+  .seq { display:flex; gap:4px; flex-wrap:wrap; align-items:center; min-height:28px; margin:4px 0; }
+  .seq .step { background:var(--info); color:#fff; border-radius:6px; padding:1px 8px; font-size:12.5px; cursor:pointer; }
+  .seq .step.wait { background:var(--muted); }
+  .seq .arrow { color:var(--muted); }
+  .warn { color:var(--warn); font-size:12.5px; }
+  .job { display:flex; justify-content:space-between; gap:6px; font-size:12.5px; padding:3px 0; border-top:1px solid var(--line); }
+  .job .st { font-weight:600; } .job .st.working { color:var(--info); } .job .st.success { color:var(--ok); }
+  .job .st.failed, .job .st.canceled { color:var(--bad); }
+  #map.pick { cursor:crosshair; }
+  button.on { background:var(--info); color:#fff; border-color:var(--info); }
+
+  /* 탭 + Jobs 탭 */
+  .tabs { display:flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:4px;
+          position:sticky; top:0; z-index:2; flex-shrink:0; }
+  .tab { flex:1; border:0; background:transparent; border-radius:7px; padding:6px 8px; font-weight:600; color:var(--muted); }
+  .tab:hover { background:color-mix(in srgb, var(--info) 8%, transparent); }
+  .tab.on { background:var(--info); color:#fff; }
+  .cnt { display:inline-block; min-width:18px; padding:0 6px; border-radius:99px; font-size:11.5px; font-weight:600;
+         background:color-mix(in srgb, var(--muted) 22%, transparent); color:var(--text); text-align:center; }
+  .tab.on .cnt { background:rgba(255,255,255,.28); color:#fff; }
+  .pane { display:flex; flex-direction:column; gap:12px; flex-shrink:0; }
+  .pane[hidden] { display:none; }
+  .pane > section { flex-shrink:0; }
+  .hint { color:var(--muted); font-size:12px; margin:2px 0 6px; }
+  h3 { font-size:12.5px; margin:12px 0 6px; color:var(--muted); font-weight:600; display:flex; gap:6px; align-items:center; }
+  .seg { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin:10px 0 8px; padding:3px; border-radius:9px;
+         background:color-mix(in srgb, var(--muted) 12%, transparent); }
+  .seg button { border:0; background:transparent; border-radius:7px; padding:4px 2px; font-size:12.5px; white-space:nowrap; }
+  .seg button.on { background:var(--panel); box-shadow:0 1px 3px rgba(0,0,0,.18); font-weight:600; }
+  .stepform { border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+  .stepform[hidden] { display:none; }
+  button.chip { background:var(--panel); color:var(--text); }
+  .chip:hover { border-color:var(--info); }
+  .chip .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:2px; }
+  .chip .dot.raised { background:var(--warn); } .chip .dot.stale { background:var(--muted); opacity:.5; }
+  .steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .steps .empty { padding:10px; text-align:center; border:1px dashed var(--line); border-radius:8px; }
+  .stp { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-left:4px solid var(--info);
+         border-radius:8px; padding:4px 6px 4px 8px; }
+  .stp.t-wait, .stp.t-wait_flag { border-left-color:var(--warn); }
+  .stp.t-set_output { border-left-color:#8e4ec6; }
+  .stp .n { color:var(--muted); font:600 12px ui-monospace,Menlo,monospace; min-width:16px; }
+  .stp .lb { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .stp .acts { display:flex; gap:2px; }
+  .stp .acts button { border:0; background:transparent; padding:0 6px; font-size:14px; color:var(--muted); }
+  .stp .acts button:hover:not(:disabled) { color:var(--text); background:color-mix(in srgb, var(--muted) 18%, transparent); }
+  .jobcard { border:1px solid var(--line); border-left:4px solid var(--muted); border-radius:8px; padding:6px 10px; margin-bottom:8px; }
+  .jobcard.working { border-left-color:var(--info); } .jobcard.success { border-left-color:var(--ok); }
+  .jobcard.failed, .jobcard.canceled { border-left-color:var(--bad); }
+  .jobcard.done { opacity:.8; }
+  .jh { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .jh .who { color:var(--muted); font-size:12.5px; margin-right:auto; }
+  .jh button { padding:0 8px; font-size:12px; }
+  .pill { padding:0 8px; border-radius:99px; font-size:11.5px; font-weight:600; border:1px solid currentColor; color:var(--muted); }
+  .pill.working, .pill.info { color:var(--info); } .pill.success, .pill.lowered { color:var(--ok); }
+  .pill.failed, .pill.canceled { color:var(--bad); } .pill.raised { color:var(--warn); }
+  .jsteps { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+  .jsteps .s { font-size:12px; padding:0 7px; border-radius:6px; border:1px solid var(--line); color:var(--muted); }
+  .jsteps .s.done { background:color-mix(in srgb, var(--ok) 16%, transparent); color:var(--text); border-color:transparent; }
+  .jsteps .s.cur { background:var(--info); color:#fff; border-color:var(--info); font-weight:600; }
+  .flagrow { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--line); }
+  .flagrow b { flex:1; font-weight:600; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<header>
+  <h1>FMS Control Dashboard</h1>
+  <select id="sel-site" title="Site"></select>
+  <select id="sel-map" title="Map"></select>
+  <span id="b-fms" class="badge off">FMS disconnected</span>
+  <span id="b-io" class="badge off">Pi simulator offline</span>
+</header>
+<main>
+  <section class="mapwrap">
+    <canvas id="map"></canvas>
+    <div class="toolbar">
+      <label><input type="checkbox" id="t-grid" checked>Grid</label>
+      <label><input type="checkbox" id="t-zone" checked>Zones</label>
+      <label><input type="checkbox" id="t-loc" checked>Locations</label>
+      <label><input type="checkbox" id="t-path" checked>Path</label>
+      <label><input type="checkbox" id="t-raw">Raw colors</label>
+      <button id="btn-fit">Fit</button>
+      <button id="btn-pick" title="Click the map to set a destination">Set destination</button>
+    </div>
+    <div class="hud" id="hud">x -, y -</div>
+    <div class="msg" id="mapmsg">Loading map…</div>
+  </section>
+
+  <aside>
+    <nav class="tabs" role="tablist">
+      <button class="tab" data-tab="monitor" role="tab">Monitor</button>
+      <button class="tab" data-tab="jobs" role="tab">Jobs <span class="cnt" id="cnt-jobs" hidden></span></button>
+      <button class="tab" data-tab="signals" role="tab">Signals</button>
+    </nav>
+    <section id="sec-dest" hidden>
+      <h2 id="d-title">New destination</h2>
+      <div class="fld"><label>Name</label><input id="d-name"></div>
+      <div class="fld"><label>x, y</label><input id="d-x" type="number" step="0.01"><input id="d-y" type="number" step="0.01"></div>
+      <div class="fld"><label>Heading°</label><input id="d-th" type="number" step="15" value="0" title="0 = right (+x), 90 = down (+y), clockwise"></div>
+      <label class="chk" title="Checked: on a multi-stop job the robot stops here and turns to this heading before continuing. Unchecked: it drives through without turning (the last stop of a job always turns to its heading)."><input type="checkbox" id="d-keep"> Keep heading (stop and align)</label>
+      <div class="warn" id="d-warn"></div>
+      <div class="btns">
+        <button id="d-save">Save location</button>
+        <button id="d-add" class="primary">Save + add to job</button>
+        <button id="d-cancel">Cancel</button>
+      </div>
+    </section>
+    <div class="pane" id="pane-monitor">
+    <section>
+      <h2>Robots (<span id="robot-count">0</span>)</h2>
+      <div id="robots"><div class="empty">Waiting for FMS server…</div></div>
+    </section>
+    <section>
+      <h2>Event log</h2>
+      <div class="logbox"><table><tbody id="log"></tbody></table></div>
+    </section>
+    </div>
+
+    <div class="pane" id="pane-jobs" hidden>
+      <section>
+        <h2>New job</h2>
+        <div class="fld"><label>Robot</label><select id="j-robot"></select></div>
+
+        <div class="seg" id="step-types" role="tablist" aria-label="Step type">
+          <button data-type="move" class="on">➜ Move</button>
+          <button data-type="wait">⏱ Wait</button>
+          <button data-type="flag">⚑ Flag</button>
+          <button data-type="pin">⚡ Pin</button>
+        </div>
+        <div class="stepform" id="sf-move">
+          <div class="hint">Click a destination to add it as a step. You can also click a marker on the map. ✎ edits, ✕ deletes a saved destination.</div>
+          <div class="chips" id="j-locs"></div>
+        </div>
+        <div class="stepform" id="sf-wait" hidden>
+          <div class="hint">The robot does nothing for the given time, then the job continues.</div>
+          <div class="fld"><input id="w-sec" type="number" min="0.1" step="any" placeholder="seconds"><button id="w-add">Add wait</button></div>
+          <div class="chips"><button class="chip" data-sec="1">1 s</button><button class="chip" data-sec="5">5 s</button><button class="chip" data-sec="10">10 s</button><button class="chip" data-sec="30">30 s</button></div>
+        </div>
+        <div class="stepform" id="sf-flag" hidden>
+          <div class="hint">Wait for a signal reported by the Raspberry Pi. Pick one below (dot: orange = raised, green = lowered, grey = no recent report). A signal that is unknown or not reported for 6 s never satisfies the condition.</div>
+          <div class="chips" id="w-flagchips"></div>
+          <div class="fld"><label>Signal</label><input id="w-flag" list="flag-names" placeholder="e.g. button"><datalist id="flag-names"></datalist></div>
+          <div class="fld"><label>Until</label><select id="w-until"><option value="lowered">lowered (0)</option><option value="raised">raised (1)</option></select></div>
+          <div class="fld"><label>Hold</label><input id="w-hold" type="number" min="0" step="any" placeholder="0"><span class="hint" style="margin:0">s, must stay true this long</span></div>
+          <div class="fld"><label>Timeout</label><input id="w-timeout" type="number" min="0" step="any" placeholder="none"><select id="w-ontimeout" style="max-width:120px"><option value="fail">then fail job</option><option value="continue">then continue</option></select></div>
+          <div class="btns"><button id="w-add-flag" class="primary">Add wait</button></div>
+        </div>
+        <div class="stepform" id="sf-pin" hidden>
+          <div class="hint">Sent to the Raspberry Pi when the job reaches this step. The job fails if the Pi does not answer.</div>
+          <div class="fld">
+            <select id="o-dev">
+              <option value="lamp_red">Tower red</option><option value="lamp_yellow">Tower yellow</option><option value="lamp_green">Tower green</option>
+              <option value="buzzer">Buzzer</option></select>
+            <select id="o-val" style="max-width:76px"><option value="1">ON</option><option value="0">OFF</option></select>
+            <button id="o-add">Add pin</button></div>
+        </div>
+
+        <h3>Steps <span class="cnt" id="step-count"></span></h3>
+        <ol class="steps" id="j-seq"></ol>
+        <div class="btns">
+          <button id="j-go" class="primary" disabled>Create job</button>
+          <button id="j-clear">Clear steps</button>
+        </div>
+        <div id="j-msg" class="warn"></div>
+      </section>
+      <section>
+        <h2>Job queue <span class="cnt" id="q-count"></span></h2>
+        <div id="jobs"><div class="empty">No jobs</div></div>
+        <div class="btns"><button id="j-clearfin" hidden>Clear finished</button></div>
+      </section>
+    </div>
+
+    <div class="pane" id="pane-signals" hidden>
+      <section>
+        <h2>Signal flags</h2>
+        <div class="hint">Set by the Raspberry Pi (PUT /api/v1/flags/{name}). Jobs read them with "Flag" steps.</div>
+        <div id="flags"></div>
+        <div class="fld"><input id="f-new" placeholder="new flag name"><button id="f-add">Raise</button></div>
+      </section>
+      <section>
+        <h2>Raspberry Pi simulator</h2>
+        <div class="hint">Raw device states (button, buzzer, lamp_*) come from the Pi simulator.</div>
+        <a id="pi-link" href="#" target="_blank">Open the Pi simulator dashboard</a>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+// AMR_viewer/tools/qt_viewer.py 와 같은 팔레트·규약
+const ROBOT_PALETTE = ["#e5484d","#0090ff","#30a46c","#f5a623","#8e4ec6","#e93d82","#12a594","#d6409f","#f76b15","#3e63dd",
+                       "#46a758","#ab4aba","#e54666","#0d9488","#ca8a04","#7c3aed","#dc2626","#0284c7","#65a30d","#c026d3"];
+const CELL = { occ:[28,28,30], unk:[154,160,166], free:[255,255,255] };
+const ZONE_COLORS = { prohibit:"255,59,48", slow:"255,159,10", oneway:"10,132,255" };
+const STALE_AFTER_MS = 2000;
+const PATH_TICK = 14;          // 경로 눈금 간격 (맵 픽셀 단위, 뷰어와 동일)
+
+// ---- 상태 --------------------------------------------------------------
+const robots = new Map();      // robot_id -> RobotView (서버 DTO)
+const lastSeen = new Map();    // robot_id -> 마지막 state 수신 시각 (브라우저 시계, 서버와 시계 어긋남 방지)
+const prevSummary = new Map();
+let selectedRobot = null;
+let sites = [];
+let cur = null;                // { siteId, mapId, meta, img(offscreen canvas), zones, locations }
+let siteLocs = [];             // 이 site 의 named location (job 목적지). LocationOut: name,map_id,x,y,theta
+let pending = null;            // 지도에서 찍은 새 목적지 {x,y}
+let pickMode = false;
+const jobCache = new Map();    // job_id -> job (현재 목적지 계산용)
+let editing = null;            // 수정 중인 location 이름 (null 이면 새로 만드는 중)
+let seq = [];                  // 작업 명령 순서: {type:"move",target} | {type:"wait",seconds} | {type:"wait_flag",flag}
+let flagCache = {};            // FMS 외부 플래그 {name:{value,updated_at}}
+const opts = { follow:false, grid:true, zone:true, loc:true, path:true, raw:false };
+const view = { scale:1, tx:0, ty:0 };   // 맵 픽셀 -> 화면(css px): screen = px*scale + t
+
+function robotColor(id) {
+  const m = id.match(/(\d+)\s*$/);
+  let n = m ? parseInt(m[1], 10) - 1 : [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return ROBOT_PALETTE[((n % ROBOT_PALETTE.length) + ROBOT_PALETTE.length) % ROBOT_PALETTE.length];
+}
+
+// ---- 로그 ---------------------------------------------------------------
+function addLog(type, msg) {
+  const tr = document.createElement("tr");
+  if (type === "alarm") tr.className = "alarm";
+  tr.innerHTML = `<td class="t">${new Date().toLocaleTimeString("en-GB")}</td><td>${esc(msg)}</td>`;
+  const body = $("#log");
+  body.prepend(tr);
+  while (body.children.length > 200) body.lastChild.remove();
+}
+
+// ---- 지도 로딩 -----------------------------------------------------------
+async function getJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+  return r.json();
+}
+
+function setMapMsg(text) {
+  const el = $("#mapmsg");
+  el.textContent = text || "";
+  el.hidden = !text;
+}
+
+function buildMapCanvas(image, meta) {
+  const c = document.createElement("canvas");
+  c.width = meta.width_px; c.height = meta.height_px;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.drawImage(image, 0, 0);
+  const raw = c;
+  let classified = null;
+  try {   // 교차 오리진이면 getImageData 가 막힌다 → 원본 색으로 폴백
+    const src = g.getImageData(0, 0, c.width, c.height);
+    const d = src.data;
+    const occT = meta.occupied_thresh ?? 64, freeT = meta.free_thresh ?? 192;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i];   // 8비트 그레이스케일
+      const col = v < occT ? CELL.occ : v >= freeT ? CELL.free : CELL.unk;
+      d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+    }
+    classified = document.createElement("canvas");
+    classified.width = c.width; classified.height = c.height;
+    classified.getContext("2d").putImageData(src, 0, 0);
+  } catch (e) { console.warn("Cannot classify map colors, showing raw:", e); }
+  return { raw, classified };
+}
+
+async function loadMap(siteId, mapId) {
+  cur = null; draw();
+  setMapMsg("Loading map…");
+  try {
+    const summ = await getJson(`${FMS_API}/sites/${siteId}/maps/${mapId}`);
+    const ver = summ.active_version;
+    if (!ver) throw new Error("No active version");
+    const f = (name) => `${FMS_API}/sites/${siteId}/maps/${mapId}/files/${name}?version=${ver}`;
+    const [meta, ann] = await Promise.all([getJson(f("fms_map.json")), getJson(f("annotations.json")).catch(() => ({}))]);
+    const image = await new Promise((ok, ng) => {
+      const im = new Image(); im.crossOrigin = "anonymous";
+      im.onload = () => ok(im); im.onerror = () => ng(new Error("Failed to load map image"));
+      im.src = f(meta.image);
+    });
+    const layers = buildMapCanvas(image, meta);
+    cur = { siteId, mapId, ver, meta, layers, zones: ann.zones || [], locations: ann.locations || [] };
+    setMapMsg("");
+    fitView();
+    seq = []; pending = null; syncDest();
+    loadSiteLocations();
+    addLog("info", `[Map] ${siteId}/${mapId} (${ver}) ${meta.width_px}×${meta.height_px}px, ${meta.resolution}m/px`);
+  } catch (e) {
+    setMapMsg("Failed to load map: " + e.message +
+      (FMS_ORIGIN !== location.origin ? "\n(Open /ui/fms.html served by the FMS server)" : ""));
+  }
+  renderRobots();
+}
+
+async function loadSites() {
+  try {
+    sites = await getJson(`${FMS_API}/sites`);
+  } catch (e) { setMapMsg("Cannot reach FMS server: " + e.message); return; }
+  const selSite = $("#sel-site");
+  selSite.innerHTML = sites.map((s) => `<option value="${esc(s.site_id)}">${esc(s.name)}</option>`).join("");
+  if (!sites.length) { setMapMsg("No site registered. Register one on the FMS admin page (/)."); return; }
+  await onSiteChange();
+}
+
+async function onSiteChange() {
+  const siteId = $("#sel-site").value;
+  const maps = await getJson(`${FMS_API}/sites/${siteId}/maps`);
+  $("#sel-map").innerHTML = maps.map((m) => `<option value="${esc(m.map_id)}">${esc(m.map_id)}</option>`).join("");
+  if (!maps.length) { cur = null; setMapMsg("This site has no map"); draw(); return; }
+  await loadMap(siteId, $("#sel-map").value);
+}
+$("#sel-site").onchange = onSiteChange;
+$("#sel-map").onchange = () => loadMap($("#sel-site").value, $("#sel-map").value);
+
+// ---- 캔버스 렌더 ---------------------------------------------------------
+const canvas = $("#map");
+const ctx = canvas.getContext("2d");
+let dpr = 1, dirty = true;
+const requestDraw = () => { dirty = true; };
+
+function resizeCanvas() {
+  dpr = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  requestDraw();
+}
+new ResizeObserver(() => { const first = !cur; resizeCanvas(); if (cur && first) fitView(); }).observe(canvas);
+
+function fitView() {
+  if (!cur) return;
+  const r = canvas.getBoundingClientRect();
+  const s = Math.min(r.width / cur.meta.width_px, r.height / cur.meta.height_px);
+  view.scale = s;
+  view.tx = (r.width - cur.meta.width_px * s) / 2;
+  view.ty = (r.height - cur.meta.height_px * s) / 2;
+  requestDraw();
+}
+function setFollow(on) {
+  opts.follow = on; requestDraw();
+  if (typeof renderRobots === "function") renderRobots();
+}
+$("#btn-fit").onclick = () => { setFollow(false); fitView(); };
+
+const worldToPx = (m, x, y) => [(x - m.origin_x) / m.resolution, (y - m.origin_y) / m.resolution];
+const pxToWorld = (m, px, py) => [m.origin_x + px * m.resolution, m.origin_y + py * m.resolution];
+
+function outlinedText(text, x, y, size, fill, alpha) {
+  ctx.globalAlpha = alpha;
+  ctx.font = `bold ${size}px -apple-system, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.lineJoin = "round";
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill; ctx.fillText(text, x, y);
+}
+
+// 로봇이 지금 향하는 목적지 = 아직 도달 안 한 첫 노드(node_states[0]).
+// order 의 노드 i 는 job 의 i 번째 명령이라 (task.compile_to_order) 명령 → location 좌표로 찾는다.
+// job 정보를 아직 못 받았거나 location 을 못 찾으면 null (전체 경로를 그대로 그린다).
+function currentTarget(s) {
+  const n = s.node_states && s.node_states[0];
+  // order_id: 첫 구간 = job_id, wait 뒤 구간 = "job_id~c<시작 명령 번호>" (task.py). 노드 i = 구간 시작(cursor)부터 i 번째 명령.
+  const job = n && s.order_id ? jobCache.get(s.order_id.split("~")[0]) : null;
+  const cmd = job && job.commands[(job.cursor || 0) + n.sequence_id];
+  return cmd && cmd.type === "move" ? siteLocs.find((l) => l.name === cmd.target) || null : null;
+}
+// world 좌표 점열에서 목적지에 처음 닿는 지점(0.3m 이내, 없으면 가장 가까운 점)까지만 자른다.
+function cutPathAt(pts, tgt) {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const d = Math.hypot(pts[i].x - tgt.x, pts[i].y - tgt.y);
+    if (d <= 0.3) return pts.slice(0, i + 1);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return pts.slice(0, best + 1);
+}
+
+function drawRobot(id, rv, m) {
+  const s = rv.state;
+  if (!s) return;
+  const color = robotColor(id);
+  const stale = performance.now() - (lastSeen.get(id) || 0) > STALE_AFTER_MS;
+  const alpha = stale ? 0.3 : 0.95;
+  const k = view.scale;
+
+  // 계획 경로 (진행방향 수직 눈금). local_path 는 job 전체의 남은 경로라서 지금 가는 목적지까지만 자른다.
+  const tgt = currentTarget(s);
+  if (opts.path && s.local_path && s.local_path.length) {
+    let world = [{ x: s.pose.x, y: s.pose.y }, ...s.local_path];
+    if (tgt) world = cutPathAt(world, tgt);
+    const pts = world.map((p) => worldToPx(m, p.x, p.y));
+    if (tgt) {   // 현재 목적지 강조 링
+      const [tx, ty] = worldToPx(m, tgt.x, tgt.y);
+      ctx.globalAlpha = stale ? 0.3 : 1; ctx.strokeStyle = color; ctx.lineWidth = 2 / k;
+      ctx.beginPath(); ctx.arc(tx, ty, 11 / k, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = stale ? 0.25 : 0.75;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6 / k;
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    let since = 0; const tl = PATH_TICK * 0.4;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+      const len = Math.hypot(bx - ax, by - ay);
+      if (len < 1e-6) continue;
+      const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux;
+      let d = PATH_TICK - since;
+      while (d < len) {
+        const cx = ax + ux * d, cy = ay + uy * d;
+        ctx.moveTo(cx - nx * tl / 2, cy - ny * tl / 2); ctx.lineTo(cx + nx * tl / 2, cy + ny * tl / 2);
+        d += PATH_TICK;
+      }
+      since = len - (d - PATH_TICK);
+    }
+    ctx.stroke();
+  }
+
+  // 감지된 동적 장애물
+  ctx.globalAlpha = stale ? 0.25 : 0.85;
+  for (const o of s.detected_obstacles || []) {
+    const [ox, oy] = worldToPx(m, o.x, o.y);
+    const w = o.width / m.resolution, h = o.height / m.resolution;
+    ctx.fillStyle = "#000"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 1 / k;
+    ctx.fillRect(ox - w / 2, oy - h / 2, w, h); ctx.strokeRect(ox - w / 2, oy - h / 2, w, h);
+  }
+
+  // 몸체 + 진행 방향 삼각형. world 도 y-down 이라 theta 를 그대로 회전각으로 쓴다.
+  const [px, py] = worldToPx(m, s.pose.x, s.pose.y);
+  const L = Math.max(s.length || 0.7, 1e-3) / m.resolution, W = Math.max(s.width || 0.5, 1e-3) / m.resolution;
+  ctx.save();
+  ctx.translate(px, py); ctx.rotate(s.pose.theta);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color; ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.4 / k;
+  ctx.fillRect(-L / 2, -W / 2, L, W); ctx.strokeRect(-L / 2, -W / 2, L, W);
+  ctx.beginPath();
+  ctx.moveTo(L * 0.5, 0); ctx.lineTo(-L * 0.1, -W * 0.32); ctx.lineTo(-L * 0.1, W * 0.32); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  // 라벨 (회전시키지 않는다). 글자 크기는 화면 기준 고정.
+  ctx.save();
+  ctx.translate(px, py - W * 0.9); ctx.scale(1 / k, 1 / k);
+  outlinedText(id.replace("AMR-", ""), 0, 0, 12, "#fff", alpha);
+  ctx.restore();
+}
+
+// 따라갈 로봇: 선택한 로봇(이 맵에 있을 때), 없으면 이 맵의 첫 번째 로봇
+function followTarget() {
+  const onMap = (r) => r.state && r.site_id === cur.siteId && r.assigned_map_id === cur.mapId;
+  const sel = robots.get(selectedRobot);
+  if (sel && onMap(sel)) return sel;
+  return [...robots.values()].filter(onMap).sort((a, b) => a.robot_id.localeCompare(b.robot_id))[0] || null;
+}
+// 로봇이 캔버스 정중앙에 오도록 뷰를 옮긴다. 상태가 5Hz 로 오므로 프레임마다 20% 씩 보간해 부드럽게 따라간다.
+function followCamera(m) {
+  const rv = followTarget();
+  if (!rv) return;
+  const [px, py] = worldToPx(m, rv.state.pose.x, rv.state.pose.y);
+  const r = canvas.getBoundingClientRect();
+  const tx = r.width / 2 - px * view.scale, ty = r.height / 2 - py * view.scale;
+  view.tx += (tx - view.tx) * 0.2; view.ty += (ty - view.ty) * 0.2;
+}
+
+function draw() {
+  dirty = false;
+  const W = canvas.width, H = canvas.height;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (!cur) return;
+  const m = cur.meta;
+  if (opts.follow) followCamera(m);
+  ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.tx, dpr * view.ty);
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = view.scale < 1;
+
+  const layer = (opts.raw || !cur.layers.classified) ? cur.layers.raw : cur.layers.classified;
+  ctx.drawImage(layer, 0, 0);
+
+  const k = view.scale;
+  if (opts.grid) {   // 1 m 격자
+    const step = 1 / m.resolution;
+    ctx.strokeStyle = "rgba(0,144,255,.27)"; ctx.lineWidth = 1 / k;
+    ctx.beginPath();
+    for (let x = 0; x <= m.width_px; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, m.height_px); }
+    for (let y = 0; y <= m.height_px; y += step) { ctx.moveTo(0, y); ctx.lineTo(m.width_px, y); }
+    ctx.stroke();
+  }
+  if (opts.zone) {
+    for (const z of cur.zones) {
+      if (!z.polygon || z.polygon.length < 3) continue;
+      const rgb = ZONE_COLORS[String(z.type).toLowerCase()] || "154,160,166";
+      ctx.beginPath();
+      z.polygon.forEach((p, i) => { const [x, y] = worldToPx(m, p.x, p.y); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${rgb},.35)`; ctx.fill();
+      ctx.strokeStyle = `rgb(${rgb})`; ctx.lineWidth = 1.5 / k; ctx.stroke();
+    }
+  }
+  if (opts.loc) {
+    for (const l of cur.locations) {
+      const [x, y] = worldToPx(m, l.pose.x, l.pose.y);
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(l.pose.theta);
+      const r = 5 / k;
+      ctx.fillStyle = "#0090ff"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.2 / k;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(r * 1.9, 0); ctx.lineTo(r * 0.5, -r * 0.7); ctx.lineTo(r * 0.5, r * 0.7); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.translate(x, y - 7 / k); ctx.scale(1 / k, 1 / k);
+      outlinedText(l.name, 0, 0, 11, "#9fd0ff", 1); ctx.restore();
+    }
+  }
+  // FMS 에 등록된 목적지(named location) — 작업(job)의 target 이 되는 것들
+  for (const l of siteLocs) {
+    if (l.map_id !== cur.mapId) continue;
+    const [x, y] = worldToPx(m, l.x, l.y), r = 6 / k, n = seq.reduce((a, c, i) => c.type === "move" && c.target === l.name ? a.concat(i + 1) : a, []);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(l.theta || 0);
+    ctx.fillStyle = n.length ? "#2563eb" : "#ff9f0a"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5 / k;
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r * 2.2, 0); ctx.lineTo(r * 0.7, -r * 0.6); ctx.lineTo(r * 0.7, r * 0.6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.translate(x, y - 9 / k); ctx.scale(1 / k, 1 / k);
+    outlinedText(l.name + (l.keep_theta ? " ⟳" : "") + (n.length ? " #" + n.join(",") : ""), 0, 0, 12, n.length ? "#9fc0ff" : "#ffd28a", 1); ctx.restore();
+  }
+  if (pending) {
+    const [x, y] = worldToPx(m, pending.x, pending.y), r = 9 / k;
+    const th = (parseFloat($("#d-th").value) || 0) * Math.PI / 180;
+    ctx.globalAlpha = 1; ctx.strokeStyle = "#ff2d95"; ctx.lineWidth = 2 / k;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.moveTo(x - r * 1.6, y); ctx.lineTo(x + r * 1.6, y);
+    ctx.moveTo(x, y - r * 1.6); ctx.lineTo(x, y + r * 1.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(th) * r * 3, y + Math.sin(th) * r * 3); ctx.stroke();
+  }
+  // world (0,0) 원점 십자
+  { const [ox, oy] = worldToPx(m, 0, 0), r = 0.15 / m.resolution;
+    ctx.globalAlpha = 1; ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2 / k;
+    ctx.beginPath(); ctx.moveTo(ox - r, oy); ctx.lineTo(ox + r, oy); ctx.moveTo(ox, oy - r); ctx.lineTo(ox, oy + r); ctx.stroke(); }
+
+  for (const [id, rv] of robots) {
+    if (rv.site_id === cur.siteId && rv.assigned_map_id === cur.mapId) drawRobot(id, rv, m);
+  }
+  ctx.globalAlpha = 1;
+}
+
+(function loop() {
+  // 로봇이 stale 로 넘어가는 순간에도 다시 그리도록 주기적으로 dirty 처리 (500ms)
+  if (dirty || opts.follow) draw();   // 따라가기 중엔 매 프레임 그려 카메라를 보간
+  requestAnimationFrame(loop);
+})();
+setInterval(requestDraw, 500);
+
+// 조작: 휠 확대(커서 기준), 드래그 이동, 좌표 HUD
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  if (!cur) return;
+  const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const ns = Math.min(Math.max(view.scale * f, 0.02), 40);
+  const real = ns / view.scale;
+  view.tx = mx - (mx - view.tx) * real; view.ty = my - (my - view.ty) * real; view.scale = ns;
+  requestDraw();
+}, { passive: false });
+let drag = null;
+function eventToWorld(e) {
+  const r = canvas.getBoundingClientRect();
+  return pxToWorld(cur.meta, (e.clientX - r.left - view.tx) / view.scale, (e.clientY - r.top - view.ty) / view.scale);
+}
+function hitLocation(e) {   // 화면 12px 이내의 등록 목적지
+  if (!cur) return null;
+  const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  for (const l of siteLocs) {
+    if (l.map_id !== cur.mapId) continue;
+    const [px, py] = worldToPx(cur.meta, l.x, l.y);
+    if (Math.hypot(px * view.scale + view.tx - mx, py * view.scale + view.ty - my) <= 12) return l;
+  }
+  return null;
+}
+canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false }; canvas.setPointerCapture(e.pointerId); canvas.classList.add("drag"); });
+canvas.addEventListener("pointerup", (e) => {
+  const d = drag; drag = null; canvas.classList.remove("drag");
+  if (!d || d.moved || !cur) return;   // 드래그가 아닌 "클릭"만 처리
+  const hit = editing ? null : hitLocation(e);
+  if (hit) { addStep({ type: "move", target: hit.name }); return; }
+  if (pickMode || editing) {
+    const [wx, wy] = eventToWorld(e);
+    pending = { x: wx, y: wy };
+    syncDest(true);
+  }
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (drag) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) drag.moved = true;
+    if (drag.moved && opts.follow) setFollow(false);   // 직접 끌면 따라가기 해제
+    if (drag.moved) { view.tx = drag.tx + e.clientX - drag.x; view.ty = drag.ty + e.clientY - drag.y; requestDraw(); }
+  }
+  if (cur) {
+    const [wx, wy] = eventToWorld(e);
+    $("#hud").textContent = `x ${wx.toFixed(2)}, y ${wy.toFixed(2)} m`;
+  }
+});
+canvas.addEventListener("dblclick", fitView);
+for (const [id, key] of [["t-grid","grid"],["t-zone","zone"],["t-loc","loc"],["t-path","path"],["t-raw","raw"]]) {
+  $("#" + id).onchange = (e) => { opts[key] = e.target.checked; requestDraw(); };
+}
+
+// ---- 로봇 목록 -----------------------------------------------------------
+function summary(r) {
+  const s = r.state;
+  if (!s) return r.liveness;
+  let t = s.state + (s.sub_state ? `/${s.sub_state}` : "");
+  if (s.paused) t += ` (paused:${s.pause_source})`;
+  return `${r.liveness} ${t}`;
+}
+function noteChange(r) {
+  const cur2 = summary(r), old = prevSummary.get(r.robot_id);
+  if (old === cur2) return;
+  prevSummary.set(r.robot_id, cur2);
+  const bad = r.state && (r.state.state === "EMERGENCY" || r.state.state === "ERROR");
+  addLog(bad ? "alarm" : "info", `[${r.robot_id}] ${old ? old + " → " : ""}${cur2}`);
+}
+
+function renderRobots() {
+  $("#robot-count").textContent = robots.size;
+  const box = $("#robots");
+  if (!robots.size) { box.innerHTML = '<div class="empty">No robots reported</div>'; return; }
+  const followed = cur ? followTarget() : null;
+  box.innerHTML = [...robots.values()].sort((a, b) => a.robot_id.localeCompare(b.robot_id)).map((r) => {
+    const s = r.state;
+    const dead = !["ONLINE", "UNKNOWN"].includes(r.liveness);
+    const chg = s ? Math.round(s.battery.charge) : null;
+    const onMap = cur && r.site_id === cur.siteId && r.assigned_map_id === cur.mapId;
+    const following = opts.follow && followed && followed.robot_id === r.robot_id;
+    return `<div class="robot ${s ? s.state : ""} ${dead ? "dead" : ""} ${r.robot_id === selectedRobot && !following ? "sel" : ""}" data-id="${esc(r.robot_id)}">
+      <div class="top"><span><span class="sw" style="background:${robotColor(r.robot_id)}"></span>${esc(r.robot_id)}</span>
+        <span class="st">${s ? esc(s.state + (s.sub_state ? "/" + s.sub_state : "")) : "-"}</span>
+        <button class="fbtn ${following ? "on" : ""}" data-follow="${esc(r.robot_id)}" ${onMap && s ? "" : "disabled"}
+          title="Keep the map centered on this robot (only one robot at a time)">${following ? "Following" : "Follow"}</button></div>
+      <div class="row"><span>Connection</span><b>${esc(r.liveness)}${r.registered ? "" : " (unregistered)"}${onMap ? "" : " · other map"}</b></div>
+      <div class="row"><span>Position</span><b class="xy">${s ? `${s.pose.x.toFixed(2)}, ${s.pose.y.toFixed(2)} · ${s.pose.theta.toFixed(2)}rad` : "-"}</b></div>
+      <div class="row"><span>Speed · Mode</span><b>${s ? s.velocity.toFixed(2) + " m/s · " + esc(s.mode) + (s.paused ? " · paused" : "") : "-"}</b></div>
+      <div class="row"><span>Battery</span><b>${chg === null ? "-" : chg + "%" + (s.battery.charging ? " ⚡" : "")}</b></div>
+      <div class="bar"><i class="${chg !== null && chg < 20 ? "low" : ""}" style="width:${chg || 0}%"></i></div>
+      ${s && s.order_id ? `<div class="row"><span>Order</span><b>${esc(s.order_id)} (${s.node_states.length} left)</b></div>` : ""}
+      ${s && s.errors.length ? `<div class="row"><span>Errors</span><b>${esc(s.errors.map((e) => e.error_type).join(", "))}</b></div>` : ""}
+    </div>`;
+  }).join("");
+}
+$("#robots").addEventListener("click", (e) => {
+  const fb = e.target.closest("[data-follow]");
+  if (fb) {   // 이미 따라가는 로봇이면 해제, 아니면 이 로봇 하나만 따라간다
+    const id = fb.dataset.follow, f = cur ? followTarget() : null;
+    if (opts.follow && f && f.robot_id === id) setFollow(false);
+    else { selectedRobot = id; setFollow(true); }
+    renderRobots(); return;
+  }
+  const el = e.target.closest(".robot"); if (!el) return;
+  selectedRobot = el.dataset.id;
+  const r = robots.get(selectedRobot);
+  if (cur && r && r.state) {   // 선택한 로봇을 화면 중앙으로
+    const [px, py] = worldToPx(cur.meta, r.state.pose.x, r.state.pose.y);
+    const rect = canvas.getBoundingClientRect();
+    view.tx = rect.width / 2 - px * view.scale; view.ty = rect.height / 2 - py * view.scale;
+  }
+  renderRobots(); requestDraw();
+});
+
+// 상태 200ms 주기 → 목록 DOM 갱신은 합쳐서 처리. 지도는 rAF 로 즉시 반영.
+let listPending = false;
+function scheduleList() {
+  if (listPending) return;
+  listPending = true;
+  setTimeout(() => { listPending = false; renderRobots(); renderRobotSelect(); }, 300);
+}
+
+let fmsWs = null, fmsRetry = null;
+function connectFms() {
+  fmsWs = new WebSocket(FMS_WS_URL);
+  fmsWs.onopen = () => {
+    $("#b-fms").textContent = "FMS connected"; $("#b-fms").className = "badge on";
+    fmsWs._ping = setInterval(() => fmsWs.readyState === 1 && fmsWs.send("ping"), 20000);
+  };
+  fmsWs.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    const now = performance.now();
+    if (m.type === "snapshot") {
+      robots.clear();
+      m.robots.forEach((r) => { robots.set(r.robot_id, r); if (r.state) lastSeen.set(r.robot_id, now); noteChange(r); });
+    } else if (m.type === "event") {
+      if (m.kind === "removed") { robots.delete(m.robot_id); prevSummary.delete(m.robot_id); lastSeen.delete(m.robot_id); }
+      else {
+        const old = robots.get(m.robot_id);
+        // state 가 새로 왔을 때만 "살아있음" 갱신 (connection 이벤트만으론 갱신 안 함)
+        if (m.robot.state && (!old || !old.state || m.robot.last_state_at !== old.last_state_at)) lastSeen.set(m.robot_id, now);
+        robots.set(m.robot_id, m.robot); noteChange(m.robot);
+      }
+    }
+    requestDraw(); scheduleList();
+  };
+  fmsWs.onclose = () => {
+    clearInterval(fmsWs._ping);
+    $("#b-fms").textContent = "FMS disconnected"; $("#b-fms").className = "badge off";
+    clearTimeout(fmsRetry); fmsRetry = setTimeout(connectFms, 3000);
+  };
+  fmsWs.onerror = () => fmsWs.close();
+}
+
+// ---- 목적지 지정 / 작업(job) 생성 ------------------------------------------
+async function api(method, path, body) {
+  const r = await fetch(FMS_API + path, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const d = data.detail;
+    throw new Error(typeof d === "string" ? d : d ? JSON.stringify(d) : `HTTP ${r.status}`);
+  }
+  return data;
+}
+const siteBase = () => `/sites/${cur.siteId}`;
+const jmsg = (t) => { $("#j-msg").textContent = t || ""; };
+
+async function loadSiteLocations() {
+  if (!cur) return;
+  try { siteLocs = await api("GET", `${siteBase()}/locations`); } catch (e) { siteLocs = []; jmsg("Failed to load destinations: " + e.message); }
+  seq = seq.filter((c) => c.type !== "move" || siteLocs.some((l) => l.name === c.target));
+  renderJob(); requestDraw();
+}
+
+$("#btn-pick").onclick = () => {
+  pickMode = !pickMode;
+  $("#btn-pick").classList.toggle("on", pickMode);
+  canvas.classList.toggle("pick", pickMode);
+  if (!pickMode) { pending = null; editing = null; syncDest(); }
+};
+
+// 지도에서 찍은 점이 free 셀인지 검사 (같은 오리진이라 getImageData 가능)
+function cellKind(wx, wy) {
+  try {
+    const m = cur.meta, [px, py] = worldToPx(m, wx, wy), ix = Math.floor(px), iy = Math.floor(py);
+    if (ix < 0 || iy < 0 || ix >= m.width_px || iy >= m.height_px) return "outside";
+    const v = cur.layers.raw.getContext("2d").getImageData(ix, iy, 1, 1).data[0];
+    return v < (m.occupied_thresh ?? 64) ? "obstacle" : v >= (m.free_thresh ?? 192) ? "free" : "unknown";
+  } catch (e) { return null; }
+}
+function nextLocName() {
+  let i = 1; const used = new Set(siteLocs.map((l) => l.name));
+  while (used.has("P" + i)) i++;
+  return "P" + i;
+}
+function syncDest(fresh) {
+  $("#sec-dest").hidden = !pending;
+  $("#d-title").textContent = editing ? `Edit destination: ${editing}` : "New destination";
+  $("#d-name").disabled = !!editing;          // 이름은 API 상 바꿀 수 없다 (좌표·방향·종류만 수정)
+  $("#d-add").hidden = !!editing;
+  $("#d-save").textContent = editing ? "Save changes" : "Save location";
+  if (pending && fresh && !editing) {
+    $("#d-name").value = nextLocName();
+    $("#d-x").value = pending.x.toFixed(2); $("#d-y").value = pending.y.toFixed(2);
+    $("#d-th").value = 0;
+    $("#d-keep").checked = false;
+  }
+  if (pending) {
+    const kind = cellKind(pending.x, pending.y);
+    $("#d-warn").textContent = kind && kind !== "free" ? `This spot is an '${kind}' cell — the robot may not reach it` : "";
+  } else { $("#d-warn").textContent = ""; }
+  requestDraw();
+}
+for (const id of ["#d-x", "#d-y"]) $(id).oninput = () => {
+  const x = parseFloat($("#d-x").value), y = parseFloat($("#d-y").value);
+  if (Number.isFinite(x) && Number.isFinite(y)) { pending = { x, y }; syncDest(); }
+};
+$("#d-th").oninput = requestDraw;
+$("#d-cancel").onclick = () => { pending = null; editing = null; syncDest(); };
+
+function startEdit(name) {
+  const l = siteLocs.find((x) => x.name === name);
+  if (!l) return;
+  editing = name; pending = { x: l.x, y: l.y };
+  $("#d-name").value = l.name;
+  $("#d-x").value = l.x.toFixed(2); $("#d-y").value = l.y.toFixed(2);
+  $("#d-th").value = Math.round((l.theta || 0) * 180 / Math.PI);
+  $("#d-keep").checked = !!l.keep_theta;
+  syncDest();
+  $("#sec-dest").scrollIntoView({ block: "nearest" });
+}
+
+async function saveDest(addToSeq) {
+  if (!pending || !cur) return;
+  const name = $("#d-name").value.trim();
+  if (!name && !editing) { $("#d-warn").textContent = "Enter a name"; return; }
+  const theta = (parseFloat($("#d-th").value) || 0) * Math.PI / 180;
+  const wrapped = Math.atan2(Math.sin(theta), Math.cos(theta));   // Pose 검증범위(-pi~pi)
+  try {
+    const body = { map_id: cur.mapId, x: pending.x, y: pending.y, theta: wrapped, keep_theta: $("#d-keep").checked };
+    const loc = editing
+      ? await api("PUT", `${siteBase()}/locations/${encodeURIComponent(editing)}`, body)
+      : await api("POST", `${siteBase()}/locations`, { name, ...body });
+    addLog("info", `[Destination] ${loc.name} ${editing ? "updated" : "saved"} (${loc.x.toFixed(2)}, ${loc.y.toFixed(2)})` + (loc.warnings && loc.warnings.length ? " Warning: " + loc.warnings.join("; ") : ""));
+    pending = null; editing = null; syncDest();
+    await loadSiteLocations();
+    if (addToSeq) addStep({ type: "move", target: loc.name });
+  } catch (e) { $("#d-warn").textContent = (editing ? "Update" : "Save") + " failed: " + e.message; }
+}
+$("#d-save").onclick = () => saveDest(false);
+$("#d-add").onclick = () => saveDest(true);
+
+// ---- 탭 -------------------------------------------------------------------
+let tab = "monitor";
+try { tab = localStorage.getItem("fms-tab") || tab; } catch (e) { /* 저장 불가 환경 */ }
+function setTab(t) {
+  if (!["monitor", "jobs", "signals"].includes(t)) t = "monitor";
+  tab = t;
+  document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll(".pane").forEach((p) => { p.hidden = p.id !== "pane-" + t; });
+  try { localStorage.setItem("fms-tab", t); } catch (e) { /* 무시 */ }
+}
+document.querySelector(".tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+// ---- Jobs: 단계(step) 만들기 ----------------------------------------------
+const DEVICE_NAMES = { lamp_red: "Tower red", lamp_yellow: "Tower yellow", lamp_green: "Tower green", buzzer: "Buzzer" };
+function cmdLabel(c) {   // 짧은 이름 (로그, 큐의 단계 칩)
+  if (c.type === "set_output") return `⚡ ${DEVICE_NAMES[c.device] || c.device} ${+c.value ? "ON" : "OFF"}`;
+  if (c.type === "wait") return `⏱ ${c.seconds}s`;
+  if (c.type === "wait_flag") return `⚑ ${c.flag} ${c.until === "raised" ? "↑" : "↓"}${+c.hold ? ` ${c.hold}s` : ""}${c.timeout ? ` ⏲${c.timeout}s` : ""}`;
+  return c.target;
+}
+function cmdText(c) {    // 긴 설명 (단계 목록)
+  if (c.type === "set_output") return `Set <b>${esc(DEVICE_NAMES[c.device] || c.device)}</b> ${+c.value ? "ON" : "OFF"}`;
+  if (c.type === "wait") return `Wait <b>${esc(c.seconds)} s</b>`;
+  if (c.type === "wait_flag") {
+    const extra = [+c.hold ? `for ${esc(c.hold)} s` : "", c.timeout ? `(timeout ${esc(c.timeout)} s → ${c.on_timeout === "continue" ? "continue" : "fail"})` : ""].filter(Boolean).join(" ");
+    return `Wait until <b>${esc(c.flag)}</b> is ${c.until === "raised" ? "raised (1)" : "lowered (0)"}${extra ? " " + extra : ""}`;
+  }
+  return `Move to <b>${esc(c.target)}</b>`;
+}
+const CMD_ICON = { move: "➜", wait: "⏱", wait_flag: "⚑", set_output: "⚡" };
+
+function addStep(cmd) {
+  seq.push(cmd); jmsg("");
+  if (tab !== "jobs") setTab("jobs");   // 지도 마커/새 목적지에서 추가해도 결과가 바로 보이게
+  renderJob(); requestDraw();
+}
+
+function renderJob() {
+  const mine = siteLocs.filter((l) => cur && l.map_id === cur.mapId);
+  $("#j-locs").innerHTML = mine.length ? mine.map((l) =>
+    `<span class="chip" data-add="${esc(l.name)}" title="${l.keep_theta ? "Keeps heading: stops and aligns even mid-job" : "Passes through mid-job (heading ignored)"}">${esc(l.name)}${l.keep_theta ? " ⟳" : ""}<span class="x" data-edit="${esc(l.name)}" title="Edit">✎</span><span class="x" data-del="${esc(l.name)}" title="Delete">✕</span></span>`).join("")
+    : '<span class="empty">No destinations yet. Use "Set destination" and click the map</span>';
+  $("#j-seq").innerHTML = seq.length ? seq.map((c, i) =>
+    `<li class="stp t-${esc(c.type)}"><span class="n">${i + 1}</span><span class="lb">${CMD_ICON[c.type] || ""} ${cmdText(c)}</span>
+      <span class="acts"><button data-up="${i}" title="Move up"${i ? "" : " disabled"}>↑</button><button data-down="${i}" title="Move down"${i < seq.length - 1 ? "" : " disabled"}>↓</button><button data-rm="${i}" title="Remove">✕</button></span></li>`).join("")
+    : '<li class="empty">No steps yet. Pick a step type above and add it.</li>';
+  $("#step-count").textContent = seq.length || "";
+  renderRobotSelect();
+  $("#j-go").disabled = !seq.length;
+}
+function renderRobotSelect() {
+  const sel = $("#j-robot"), keep = sel.value;
+  const list = [...robots.values()].filter((r) => cur && r.site_id === cur.siteId && r.assigned_map_id === cur.mapId)
+    .sort((a, b) => a.robot_id.localeCompare(b.robot_id));
+  // 빈 값 = 로봇 미지정: 큐에서 먼저 한가해진 로봇이 가져간다
+  const html = '<option value="">Any robot (first available)</option>' + list.map((r) =>
+    `<option value="${esc(r.robot_id)}">${esc(r.robot_id)}${r.available_for_job ? "" : " (busy/unavailable)"}</option>`).join("");
+  if (sel.dataset.html === html) return;   // 300ms 마다 다시 쓰면 열려 있는 드롭다운이 닫힌다
+  sel.dataset.html = html; sel.innerHTML = html;
+  sel.value = list.some((r) => r.robot_id === keep) ? keep : "";
+}
+
+$("#step-types").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-type]"); if (!b) return;
+  document.querySelectorAll("#step-types button").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".stepform").forEach((f) => { f.hidden = f.id !== "sf-" + b.dataset.type; });
+});
+$("#j-locs").addEventListener("click", async (e) => {
+  const ed = e.target.closest("[data-edit]");
+  if (ed) { startEdit(ed.dataset.edit); return; }
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    const name = del.dataset.del;
+    if (!confirm(`Delete destination '${name}'?`)) return;
+    try { await api("DELETE", `${siteBase()}/locations/${encodeURIComponent(name)}`); addLog("info", `[Destination] ${name} deleted`); await loadSiteLocations(); }
+    catch (err) { jmsg("Delete failed: " + err.message); }
+    return;
+  }
+  const chip = e.target.closest("[data-add]");
+  if (chip) addStep({ type: "move", target: chip.dataset.add });
+});
+$("#j-seq").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const swap = (i, j) => { [seq[i], seq[j]] = [seq[j], seq[i]]; };
+  if (b.dataset.rm !== undefined) seq.splice(+b.dataset.rm, 1);
+  else if (b.dataset.up !== undefined) swap(+b.dataset.up, +b.dataset.up - 1);
+  else if (b.dataset.down !== undefined) swap(+b.dataset.down, +b.dataset.down + 1);
+  else return;
+  renderJob(); requestDraw();
+});
+$("#sf-wait").addEventListener("click", (e) => {
+  const c = e.target.closest("[data-sec]"); if (c) { $("#w-sec").value = c.dataset.sec; $("#w-sec").focus(); }
+});
+$("#w-add").onclick = () => {
+  const sec = parseFloat($("#w-sec").value);
+  if (!(sec > 0)) { jmsg("Enter wait seconds (> 0)"); return; }
+  addStep({ type: "wait", seconds: sec }); $("#w-sec").value = "";
+};
+$("#o-add").onclick = () => addStep({ type: "set_output", device: $("#o-dev").value, value: +$("#o-val").value });
+$("#w-flagchips").addEventListener("click", (e) => { const c = e.target.closest("[data-pick]"); if (c) $("#w-flag").value = c.dataset.pick; });
+$("#w-add-flag").onclick = () => {
+  const flag = $("#w-flag").value.trim();
+  if (!flag) { jmsg("Enter or pick a flag name"); return; }
+  const num = (id) => { const v = parseFloat($(id).value); return v > 0 ? v : null; };
+  const cmd = { type: "wait_flag", flag, until: $("#w-until").value };
+  const hold = num("#w-hold"), timeout = num("#w-timeout");
+  if (hold) cmd.hold = hold;
+  if (timeout) { cmd.timeout = timeout; cmd.on_timeout = $("#w-ontimeout").value; }
+  addStep(cmd); $("#w-hold").value = ""; $("#w-timeout").value = "";
+};
+$("#j-clear").onclick = () => { seq = []; jmsg(""); renderJob(); requestDraw(); };
+
+$("#j-go").onclick = async () => {
+  if (!seq.length || !cur) return;
+  const robot = $("#j-robot").value || null;
+  $("#j-go").disabled = true; jmsg("");
+  try {
+    const job = await api("POST", `${siteBase()}/jobs`, { commands: seq, robot_id: robot });
+    // 생성만 한다. 서버 큐가 로봇이 한가할 때 먼저 만든 순서로 내려보낸다(robot 없으면 아무 로봇이나).
+    addLog("info", `[Job] ${job.job_id} queued for ${robot || "any robot"}: ${seq.map(cmdLabel).join(" → ")}`);
+    seq = []; renderJob(); requestDraw(); refreshJobs();
+  } catch (e) {
+    jmsg("Job failed: " + e.message);
+    addLog("alarm", "[Job] failed: " + e.message);
+    refreshJobs();
+  }
+  $("#j-go").disabled = !seq.length;
+};
+
+// ---- Jobs: 큐 ---------------------------------------------------------------
+const isLiveJob = (j) => j.status === "pending" || j.status === "working";
+function jobCard(j) {
+  const live = isLiveJob(j), total = j.total_commands || 1;
+  const pct = Math.round(100 * (j.status === "success" ? total : j.done_commands) / total);
+  const note = j.status === "working" ? (j.phase === "wait" ? " · waiting" : j.phase === "io" ? " · sending to Pi" : j.phase === "order" ? " · moving" : "") : "";
+  const steps = j.commands.map((c, i) => {
+    const cls = j.status === "success" || i < j.done_commands ? "done" : j.status === "working" && i === j.done_commands ? "cur" : "";
+    return `<span class="s ${cls}">${esc(cmdLabel(c))}</span>`;
+  }).join("");
+  return `<div class="jobcard ${esc(j.status)}${live ? "" : " done"}">
+    <div class="jh"><b>${esc(j.job_id.split("-").pop())}</b><span class="pill ${esc(j.status)}">${esc(j.status)}${note}</span>
+      <span class="who">${esc(j.robot_id || "any robot")}</span>
+      <button ${live ? `data-cancel="${esc(j.job_id)}"` : `data-del="${esc(j.job_id)}"`}>${live ? "Cancel" : "Remove"}</button></div>
+    <div class="bar"><i class="${j.status === "failed" ? "low" : ""}" style="width:${pct}%"></i></div>
+    <div class="jsteps">${steps}</div>
+    ${j.error ? `<div class="warn">${esc(j.error)}</div>` : ""}</div>`;
+}
+let lastJobsHtml = "";
+async function refreshJobs() {
+  if (!cur) return;
+  try {
+    const all = await api("GET", `${siteBase()}/jobs`);
+    jobCache.clear(); all.forEach((j) => jobCache.set(j.job_id, j));
+    // 대기/수행 중은 전부 (먼저 만든 순 = 실행 순서), 끝난 것은 최근 5개만
+    const liveJobs = all.filter(isLiveJob), finished = all.filter((j) => !isLiveJob(j));
+    const jobs = [...liveJobs, ...finished.slice(-5).reverse()];
+    const html = jobs.length ? jobs.map(jobCard).join("") : '<div class="empty">No jobs</div>';
+    if (html !== lastJobsHtml) { lastJobsHtml = html; $("#jobs").innerHTML = html; }   // 같으면 다시 그리지 않는다 (버튼 hover/클릭 유지)
+    $("#q-count").textContent = liveJobs.length ? `${liveJobs.length} active` : "";
+    const badge = $("#cnt-jobs"); badge.hidden = !liveJobs.length; badge.textContent = liveJobs.length;
+    $("#j-clearfin").hidden = !finished.length;
+  } catch (e) { /* 다음 주기에 재시도 */ }
+}
+$("#jobs").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-cancel],[data-del]"); if (!b) return;
+  try {
+    if (b.dataset.cancel) { await api("POST", `${siteBase()}/jobs/${b.dataset.cancel}/cancel`); addLog("info", `[Job] ${b.dataset.cancel} cancel requested`); }
+    else await api("DELETE", `${siteBase()}/jobs/${b.dataset.del}`);
+  } catch (err) { jmsg("Failed: " + err.message); }
+  refreshJobs();
+});
+$("#j-clearfin").onclick = async () => {
+  const done = [...jobCache.values()].filter((j) => !isLiveJob(j));
+  await Promise.all(done.map((j) => api("DELETE", `${siteBase()}/jobs/${j.job_id}`).catch(() => {})));
+  refreshJobs();
+};
+setInterval(refreshJobs, 1000);
+
+// ---- 신호 플래그 (FMS flags API; 라즈베리파이가 PUT 으로 올리고 내린다) ----------
+async function refreshFlags() {
+  try { flagCache = await api("GET", "/flags"); } catch (e) { return; }
+  const names = Object.keys(flagCache);
+  const html = names.length ? names.map((n) => {
+    const on = flagCache[n].value, stale = flagCache[n].age > 6;
+    return `<div class="flagrow"><b>${esc(n)}</b><span class="pill ${stale ? "" : on ? "raised" : "lowered"}" title="${stale ? "No report for " + Math.round(flagCache[n].age) + " s (the Pi may be offline)" : ""}">${stale ? "no signal" : on ? "raised" : "lowered"}</span>
+      <button data-flag="${esc(n)}" data-val="${on ? 0 : 1}">${on ? "Lower" : "Raise"}</button></div>`;
+  }).join("") : '<div class="empty">No flags yet</div>';
+  const box = $("#flags");
+  if (box.dataset.html !== html) { box.dataset.html = html; box.innerHTML = html; }
+  const dl = $("#flag-names"), opts = names.map((n) => `<option value="${esc(n)}">`).join("");
+  if (dl.dataset.html !== opts) { dl.dataset.html = opts; dl.innerHTML = opts; }
+  const chips = names.map((n) => `<button class="chip" data-pick="${esc(n)}"><i class="dot ${flagCache[n].age > 6 ? "stale" : flagCache[n].value ? "raised" : ""}"></i>${esc(n)}</button>`).join("")
+    || '<span class="empty">No flags reported yet</span>';
+  const fc = $("#w-flagchips");
+  if (fc.dataset.html !== chips) { fc.dataset.html = chips; fc.innerHTML = chips; }
+}
+async function setFlag(name, value) {
+  try { await api("PUT", `/flags/${encodeURIComponent(name)}`, { value }); addLog("info", `[Flag] ${name} ${value ? "raised" : "lowered"}`); }
+  catch (e) { jmsg("Flag failed: " + e.message); }
+  refreshFlags();
+}
+$("#flags").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-flag]"); if (b) setFlag(b.dataset.flag, b.dataset.val === "1");
+});
+$("#f-add").onclick = () => { const n = $("#f-new").value.trim(); if (n) { setFlag(n, true); $("#f-new").value = ""; } };
+setInterval(refreshFlags, 1000); refreshFlags();
+
+// ---- 현장 I/O (라즈베리파이 시뮬레이터, io_server.py) -----------------------
+// 센서 값은 FMS 플래그로 올라오므로 여기선 시뮬레이터 연결 여부와 링크만 둔다.
+$("#pi-link").href = SERVER_URL + "/";
+if (typeof io === "function") {
+  const sock = io(SERVER_URL, { reconnectionDelayMax: 5000 });
+  sock.on("connect", () => { $("#b-io").textContent = "Pi simulator connected"; $("#b-io").className = "badge on"; });
+  sock.on("disconnect", () => { $("#b-io").textContent = "Pi simulator offline"; $("#b-io").className = "badge off"; });
+  sock.on("io_event", (e) => addLog(e.type, `[Pi] ${e.message}`));
+}
+
+setTab(tab);
+resizeCanvas();
+connectFms();
+renderRobots();
+loadSites();
+</script>
+</body>
+</html>

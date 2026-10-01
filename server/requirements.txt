@@ -1,0 +1,11 @@
+# 라즈베리파이 시뮬레이션 서버 (server/) 의존성. FMS 서버와 같은 venv 를 써도 된다.
+flask>=3.0
+flask-socketio>=5.3
+simple-websocket>=1.0   # threading 모드에서 WebSocket 업그레이드 (없으면 polling 으로 동작)
+pytest>=8.0
+
+# 실물 라즈베리파이에서만 (맥/윈도우에서는 설치하지 말 것 - 없으면 mockgpio 로 자동 대체)
+#   모든 모델(Pi 3/4/5) 공통 권장:  pip install rpi-lgpio     # RPi.GPIO 호환 드롭인, 코드 수정 없음
+#   RPi.GPIO 0.7.1 은 Pi 5 미지원이고, 최신 커널에서 add_event_detect 가 실패한다(sysfs 방식).
+#   둘을 같이 설치하지 말 것 (같은 RPi.GPIO 이름을 쓴다).
+#   apt 의 python3-rpi-lgpio 를 쓰려면 venv 를 python3 -m venv --system-site-packages 로 만든다.

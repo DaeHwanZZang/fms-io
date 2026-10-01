@@ -1,0 +1,1104 @@
+{
+  "seq": 33,
+  "jobs": {
+    "sited_test0920-J0001": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "WP1"
+        },
+        {
+          "type": "move",
+          "target": "WP2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0001",
+      "order_update_id": 1,
+      "done_commands": 2,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:04:57.338614+00:00",
+      "updated_at": "2026-09-30T10:05:03.531841+00:00",
+      "dispatched_at": "2026-09-30T10:04:57.345401+00:00"
+    },
+    "sited_test0920-J0002": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0002",
+      "order_update_id": 1,
+      "done_commands": 1,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:31:05.044248+00:00",
+      "updated_at": "2026-09-30T10:32:18.070746+00:00",
+      "dispatched_at": "2026-09-30T10:31:05.055314+00:00"
+    },
+    "sited_test0920-J0004": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0004",
+      "order_update_id": 1,
+      "done_commands": 2,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:33:23.910763+00:00",
+      "updated_at": "2026-09-30T10:34:26.864938+00:00",
+      "dispatched_at": "2026-09-30T10:33:23.917655+00:00"
+    },
+    "sited_test0920-J0005": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0005",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:34:58.406696+00:00",
+      "updated_at": "2026-09-30T10:36:11.477357+00:00",
+      "dispatched_at": "2026-09-30T10:34:58.420832+00:00"
+    },
+    "sited_test0920-J0006": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0006",
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:36:40.502628+00:00",
+      "updated_at": "2026-09-30T10:39:36.657580+00:00",
+      "dispatched_at": "2026-09-30T10:36:40.512158+00:00"
+    },
+    "sited_test0920-J0007": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0007",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:40:23.637712+00:00",
+      "updated_at": "2026-09-30T10:41:47.208218+00:00",
+      "dispatched_at": "2026-09-30T10:40:23.648970+00:00"
+    },
+    "sited_test0920-J0008": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0008",
+      "order_update_id": 1,
+      "done_commands": 5,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T10:51:38.806113+00:00",
+      "updated_at": "2026-09-30T10:55:03.135238+00:00",
+      "dispatched_at": "2026-09-30T10:51:38.817074+00:00"
+    },
+    "sited_test0920-J0009": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0009",
+      "order_update_id": 1,
+      "done_commands": 5,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:01:09.598460+00:00",
+      "updated_at": "2026-09-30T11:03:54.681519+00:00",
+      "dispatched_at": "2026-09-30T11:01:09.609242+00:00"
+    },
+    "sited_test0920-J0010": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0010",
+      "order_update_id": 1,
+      "done_commands": 1,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:04:32.213748+00:00",
+      "updated_at": "2026-09-30T11:04:41.882409+00:00",
+      "dispatched_at": "2026-09-30T11:04:32.223186+00:00"
+    },
+    "sited_test0920-J0011": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0011",
+      "order_update_id": 1,
+      "done_commands": 2,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:05:11.330708+00:00",
+      "updated_at": "2026-09-30T11:05:21.034217+00:00",
+      "dispatched_at": "2026-09-30T11:05:11.340598+00:00"
+    },
+    "sited_test0920-J0012": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0012",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:08:32.262340+00:00",
+      "updated_at": "2026-09-30T11:09:09.384187+00:00",
+      "dispatched_at": "2026-09-30T11:08:32.276423+00:00"
+    },
+    "sited_test0920-J0013": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0013",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:09:44.143872+00:00",
+      "updated_at": "2026-09-30T11:10:05.085757+00:00",
+      "dispatched_at": "2026-09-30T11:09:44.154800+00:00"
+    },
+    "sited_test0920-J0014": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 0,
+      "done_commands": 0,
+      "acknowledged": false,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:13:54.675981+00:00",
+      "updated_at": "2026-09-30T13:57:27.353356+00:00",
+      "dispatched_at": null
+    },
+    "sited_test0920-J0015": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "testamr",
+      "order_id": "sited_test0920-J0015",
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:17:09.974972+00:00",
+      "updated_at": "2026-09-30T11:17:54.833363+00:00",
+      "dispatched_at": "2026-09-30T11:17:09.984230+00:00"
+    },
+    "sited_test0920-J0016": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "testamr",
+      "order_id": "sited_test0920-J0016",
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T11:18:25.820853+00:00",
+      "updated_at": "2026-09-30T11:19:05.183464+00:00",
+      "dispatched_at": "2026-09-30T11:18:25.833119+00:00"
+    },
+    "sited_test0920-J0017": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0017",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T13:50:08.828706+00:00",
+      "updated_at": "2026-09-30T13:52:01.228042+00:00",
+      "dispatched_at": "2026-09-30T13:50:08.839056+00:00"
+    },
+    "sited_test0920-J0018": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": null,
+      "order_id": null,
+      "order_update_id": 0,
+      "done_commands": 0,
+      "acknowledged": false,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T13:56:47.206689+00:00",
+      "updated_at": "2026-09-30T13:57:26.432199+00:00",
+      "dispatched_at": null
+    },
+    "sited_test0920-J0019": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "move",
+          "target": "loc3"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "testamr-001",
+      "order_id": "sited_test0920-J0019",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 0,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-09-30T14:00:41.448032+00:00",
+      "updated_at": "2026-09-30T14:03:24.228479+00:00",
+      "dispatched_at": "2026-09-30T14:00:41.482854+00:00"
+    },
+    "sited_test0920-J0020": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0020~c2",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 3,
+      "order_end": 3,
+      "phase": null,
+      "wait_started": 1790814104.951859,
+      "error": null,
+      "created_at": "2026-10-01T00:20:30.818532+00:00",
+      "updated_at": "2026-10-01T00:21:59.548075+00:00",
+      "dispatched_at": "2026-10-01T00:21:17.178252+00:00"
+    },
+    "sited_test0920-J0021": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc1"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "button_pressed",
+          "until": "raised",
+          "hold": 0.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "loc1"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0021~c3",
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": true,
+      "cursor": 3,
+      "order_end": 4,
+      "phase": "order",
+      "wait_started": 1790815140.5415199,
+      "error": null,
+      "created_at": "2026-10-01T00:38:26.570157+00:00",
+      "updated_at": "2026-10-01T00:39:15.772851+00:00",
+      "dispatched_at": "2026-10-01T00:38:26.636378+00:00"
+    },
+    "sited_test0920-J0022": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "test_flag",
+          "until": "lowered",
+          "hold": 0.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "canceled",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0022~c2",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 2,
+      "order_end": 3,
+      "phase": "order",
+      "wait_started": 1790815212.33549,
+      "error": null,
+      "created_at": "2026-10-01T00:40:05.065492+00:00",
+      "updated_at": "2026-10-01T00:40:18.301371+00:00",
+      "dispatched_at": "2026-10-01T00:40:05.091389+00:00"
+    },
+    "sited_test0920-J0023": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "test_flag",
+          "until": "raised",
+          "hold": 0.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "loc2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0023~c2",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 3,
+      "order_end": 3,
+      "phase": null,
+      "wait_started": 1790815242.138725,
+      "error": null,
+      "created_at": "2026-10-01T00:40:35.503106+00:00",
+      "updated_at": "2026-10-01T00:40:58.588641+00:00",
+      "dispatched_at": "2026-10-01T00:40:35.542533+00:00"
+    },
+    "sited_test0920-J0024": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_green",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_red",
+          "value": 1
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": false,
+      "cursor": 4,
+      "order_end": 1,
+      "phase": null,
+      "wait_started": 1790842025.825691,
+      "error": null,
+      "created_at": "2026-10-01T08:06:38.249617+00:00",
+      "updated_at": "2026-10-01T08:07:10.948548+00:00",
+      "dispatched_at": "2026-10-01T08:06:38.320077+00:00"
+    },
+    "sited_test0920-J0025": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "set_output",
+          "device": "lamp_green",
+          "value": 1
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_yellow",
+          "value": 1
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_red",
+          "value": 1
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 0,
+      "done_commands": 3,
+      "acknowledged": false,
+      "cursor": 3,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": null,
+      "error": null,
+      "created_at": "2026-10-01T08:07:32.363299+00:00",
+      "updated_at": "2026-10-01T08:07:32.516981+00:00",
+      "dispatched_at": "2026-10-01T08:07:32.492602+00:00"
+    },
+    "sited_test0920-J0026": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "set_output",
+          "device": "lamp_red",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_yellow",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_green",
+          "value": 1
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 0,
+      "done_commands": 5,
+      "acknowledged": false,
+      "cursor": 5,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": 1790842083.496284,
+      "error": null,
+      "created_at": "2026-10-01T08:07:58.173976+00:00",
+      "updated_at": "2026-10-01T08:08:08.595775+00:00",
+      "dispatched_at": "2026-10-01T08:07:58.393859+00:00"
+    },
+    "sited_test0920-J0027": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "loc2"
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_green",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_red",
+          "value": 1
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 1,
+      "done_commands": 5,
+      "acknowledged": false,
+      "cursor": 5,
+      "order_end": 1,
+      "phase": null,
+      "wait_started": 1790843094.4706419,
+      "error": null,
+      "created_at": "2026-10-01T08:24:39.572078+00:00",
+      "updated_at": "2026-10-01T08:24:59.550579+00:00",
+      "dispatched_at": "2026-10-01T08:24:39.743819+00:00"
+    },
+    "sited_test0920-J0028": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "set_output",
+          "device": "laser_tx",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "laser_tx",
+          "value": 0
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 0,
+      "done_commands": 3,
+      "acknowledged": false,
+      "cursor": 3,
+      "order_end": 0,
+      "phase": null,
+      "wait_started": 1790843752.509096,
+      "error": null,
+      "created_at": "2026-10-01T08:35:52.483635+00:00",
+      "updated_at": "2026-10-01T08:35:57.560874+00:00",
+      "dispatched_at": "2026-10-01T08:35:52.504309+00:00"
+    },
+    "sited_test0920-J0029": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_auto",
+          "value": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_auto",
+          "value": 0
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": null,
+      "order_update_id": 1,
+      "done_commands": 5,
+      "acknowledged": false,
+      "cursor": 5,
+      "order_end": 1,
+      "phase": null,
+      "wait_started": 1790843874.456486,
+      "error": null,
+      "created_at": "2026-10-01T08:37:39.800816+00:00",
+      "updated_at": "2026-10-01T08:37:59.605039+00:00",
+      "dispatched_at": "2026-10-01T08:37:39.807967+00:00"
+    },
+    "sited_test0920-J0030": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "button",
+          "until": "lowered",
+          "hold": 1.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "P2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0030~c2",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 3,
+      "order_end": 3,
+      "phase": null,
+      "wait_started": 1790847340.989861,
+      "error": null,
+      "created_at": "2026-10-01T09:35:37.305004+00:00",
+      "updated_at": "2026-10-01T09:35:49.386655+00:00",
+      "dispatched_at": "2026-10-01T09:35:37.436849+00:00"
+    },
+    "sited_test0920-J0031": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "button",
+          "until": "raised",
+          "hold": 1.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "P2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0031~c2",
+      "order_update_id": 1,
+      "done_commands": 3,
+      "acknowledged": true,
+      "cursor": 3,
+      "order_end": 3,
+      "phase": null,
+      "wait_started": 1790847388.5405152,
+      "error": null,
+      "created_at": "2026-10-01T09:36:17.073963+00:00",
+      "updated_at": "2026-10-01T09:36:50.140568+00:00",
+      "dispatched_at": "2026-10-01T09:36:17.292782+00:00"
+    },
+    "sited_test0920-J0032": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P1"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "button",
+          "until": "raised",
+          "hold": 1.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "set_output",
+          "device": "lamp_green",
+          "value": 1
+        },
+        {
+          "type": "move",
+          "target": "P2"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0032~c3",
+      "order_update_id": 1,
+      "done_commands": 4,
+      "acknowledged": true,
+      "cursor": 4,
+      "order_end": 4,
+      "phase": null,
+      "wait_started": 1790847855.304225,
+      "error": null,
+      "created_at": "2026-10-01T09:43:33.182503+00:00",
+      "updated_at": "2026-10-01T09:44:39.857119+00:00",
+      "dispatched_at": "2026-10-01T09:44:11.910147+00:00"
+    },
+    "sited_test0920-J0033": {
+      "site_id": "sited_test0920",
+      "commands": [
+        {
+          "type": "move",
+          "target": "P2"
+        },
+        {
+          "type": "wait",
+          "seconds": 5.0
+        },
+        {
+          "type": "move",
+          "target": "P3"
+        },
+        {
+          "type": "wait_flag",
+          "flag": "button",
+          "until": "raised",
+          "hold": 1.0,
+          "timeout": null,
+          "on_timeout": "fail"
+        },
+        {
+          "type": "move",
+          "target": "P1"
+        }
+      ],
+      "status": "success",
+      "robot_id": "AMR-001",
+      "order_id": "sited_test0920-J0033~c4",
+      "order_update_id": 1,
+      "done_commands": 5,
+      "acknowledged": true,
+      "cursor": 5,
+      "order_end": 5,
+      "phase": null,
+      "wait_started": 1790865487.0719533,
+      "error": null,
+      "created_at": "2026-10-01T14:37:44.937259+00:00",
+      "updated_at": "2026-10-01T14:38:28.571434+00:00",
+      "dispatched_at": "2026-10-01T14:37:44.948804+00:00"
+    }
+  }
+}

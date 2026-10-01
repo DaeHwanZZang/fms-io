@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FMS Admin</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; margin: 0; padding: 16px;
+         background: #14161a; color: #d6d9df; }
+  h1 { font-size: 15px; margin: 0 0 12px; }
+  h2 { font-size: 13px; margin: 20px 0 6px; color: #7aa2f7; border-bottom: 1px solid #2b2f38; padding-bottom: 3px; }
+  section { margin-bottom: 8px; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0; }
+  th, td { border: 1px solid #2b2f38; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #1c1f26; color: #9aa0ac; font-weight: normal; }
+  tr.sel { outline: 1px solid #7aa2f7; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: #1c1f26; }
+  input, select, button { font: inherit; background: #1c1f26; color: #d6d9df;
+          border: 1px solid #3a3f4b; padding: 3px 6px; border-radius: 3px; }
+  button { cursor: pointer; }
+  button:hover { background: #2b2f38; }
+  button.danger { border-color: #7d3b45; }
+  form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+  label { color: #9aa0ac; }
+  .ok { color: #9ece6a; } .bad { color: #f7768e; } .warn { color: #e0af68; } .dim { color: #6b7080; }
+  #log { white-space: pre-wrap; background: #0f1115; border: 1px solid #2b2f38; padding: 6px;
+         max-height: 130px; overflow: auto; margin-top: 6px; font-size: 12px; }
+  .pills span { display: inline-block; padding: 0 5px; border: 1px solid #3a3f4b; border-radius: 3px; margin-right: 4px; }
+  .hint { color: #6b7080; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<section>
+  <h2>Server</h2>
+  <div id="health" class="pills">…</div>
+</section>
+
+<section>
+  <h2>Sites</h2>
+  <form id="siteForm">
+    <label>site_id</label><input name="site_id" required placeholder="hq">
+    <label>name</label><input name="name" placeholder="본사">
+    <button>Create site</button>
+  </form>
+  <table id="siteTable"><thead>
+    <tr><th>site_id</th><th>name</th><th>maps</th><th>robots</th><th>created</th><th></th></tr>
+  </thead><tbody></tbody></table>
+  <div class="hint">행 클릭 → 아래 Map/Robot 패널이 그 site 대상</div>
+</section>
+
+<section id="sitePanel" hidden>
+  <h2>Maps — <span id="mapSiteLabel"></span></h2>
+  <form id="mapForm">
+    <label>map_id</label><input name="map_id" required placeholder="floor-1">
+    <label>despeckle</label><input name="despeckle_iterations" type="number" value="0" min="0" style="width:52px">
+    <label><input name="activate" type="checkbox" checked> activate</label>
+    <label>files</label><input name="files" type="file" multiple required>
+    <button>Upload map</button>
+  </form>
+  <div class="hint">벤더 맵 폴더 파일 전부 선택 (grid_cfg.grid + 항법 PNG + location_meta.json + zone_meta.json …)</div>
+  <table id="mapTable"><thead>
+    <tr><th>map_id</th><th>map_uid</th><th>active_version</th><th>versions</th><th></th></tr>
+  </thead><tbody></tbody></table>
+
+  <h2>Robots — <span id="robotSiteLabel"></span></h2>
+  <form id="robotForm">
+    <label>robot_id</label><input name="robot_id" required placeholder="AMR-001">
+    <label>map_id</label><select name="map_id" required></select>
+    <button>Register robot</button>
+  </form>
+  <table id="robotTable"><thead>
+    <tr><th>robot_id</th><th>map_id</th><th>registered</th><th></th></tr>
+  </thead><tbody></tbody></table>
+
+  <h2>Locations — <span id="locSiteLabel"></span></h2>
+  <form id="locForm">
+    <label>name</label><input name="name" required placeholder="충전소-A">
+    <label>map_id</label><select name="map_id" required></select>
+    <label>x</label><input name="x" type="number" step="any" required style="width:72px">
+    <label>y</label><input name="y" type="number" step="any" required style="width:72px">
+    <label>theta</label><input name="theta" type="number" step="any" value="0" style="width:72px">
+    <label>type</label><select name="type">
+      <option>waypoint</option><option>station</option><option>charger</option>
+      <option>parking</option><option>other</option>
+    </select>
+    <button>Add location</button>
+  </form>
+  <table id="locTable"><thead>
+    <tr><th>name</th><th>map_id</th><th>x, y, θ</th><th>type</th><th>warnings</th><th></th></tr>
+  </thead><tbody></tbody></table>
+
+  <h2>Jobs — <span id="jobSiteLabel"></span> <span class="hint">— move 만. 경유지 여러 개 가능 (전부 같은 맵)</span></h2>
+  <form id="jobForm">
+    <label>robot</label><select name="robot_id"></select>
+    <label>move →</label><select name="target"></select>
+    <button type="button" id="jobAddStep">+ 경유지 추가</button>
+    <button>Create job</button>
+  </form>
+  <div id="jobSteps" class="hint">경유: (없음)</div>
+  <table id="jobTable"><thead>
+    <tr><th>job_id</th><th>status</th><th>robot</th><th>commands</th><th>progress</th><th>error</th><th></th></tr>
+  </thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>Live robots <span class="hint">— /api/v1/robots (2초 폴링, MQTT state 보낸 로봇만)</span></h2>
+  <table id="fleetTable"><thead>
+    <tr><th>robot_id</th><th>liveness</th><th>registered</th><th>assigned_map</th><th>map_synced</th>
+        <th>available</th><th>state</th><th>pose</th><th>map_version</th></tr>
+  </thead><tbody></tbody></table>
+</section>
+
+<div id="log"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = "/api/v1";
+let selectedSite = null;
+
+function log(msg, cls) {
+  const el = $("#log");
+  const line = document.createElement("div");
+  if (cls) line.className = cls;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.prepend(line);
+}
+
+async function req(method, url, opts = {}) {
+  const r = await fetch(url, { method, ...opts });
+  const text = await r.text();
+  let body; try { body = JSON.parse(text); } catch { body = text; }
+  if (!r.ok) { log(`${method} ${url} → ${r.status} ${text}`, "bad"); throw new Error(text); }
+  return body;
+}
+const jsonBody = obj => ({ headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) });
+
+// ---- health ----
+async function pollHealth() {
+  try {
+    const h = await (await fetch("/health")).json();
+    $("#health").innerHTML =
+      `<span class="${h.status === "ok" ? "ok" : "bad"}">status: ${h.status}</span>` +
+      `<span class="${h.mqtt_connected ? "ok" : "warn"}">mqtt: ${h.mqtt_connected}</span>` +
+      `<span>robots_known: ${h.robots_known}</span>` +
+      `<span>sites: ${h.sites}</span>` +
+      `<span>jobs: ${h.jobs}</span>`;
+  } catch { $("#health").innerHTML = `<span class="bad">server unreachable</span>`; }
+}
+
+// ---- sites ----
+async function loadSites() {
+  const sites = await req("GET", `${api}/sites`);
+  const tb = $("#siteTable tbody");
+  tb.innerHTML = "";
+  for (const s of sites) {
+    const tr = document.createElement("tr");
+    tr.className = "clickable";
+    if (s.site_id === selectedSite) tr.classList.add("sel");
+    tr.innerHTML = `<td>${s.site_id}</td><td>${s.name || ""}</td><td>${s.map_count}</td>` +
+      `<td>${s.robot_count}</td><td class="dim">${s.created_at.slice(0, 19)}</td>` +
+      `<td><button class="danger" data-del="${s.site_id}">del</button></td>`;
+    tr.addEventListener("click", e => {
+      if (e.target.dataset.del !== undefined) return;
+      selectSite(s.site_id);
+    });
+    tb.appendChild(tr);
+  }
+  tb.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`delete site ${b.dataset.del}? (force)`)) return;
+    await req("DELETE", `${api}/sites/${b.dataset.del}?force=true`);
+    log(`site ${b.dataset.del} deleted`, "warn");
+    if (selectedSite === b.dataset.del) { selectedSite = null; $("#sitePanel").hidden = true; }
+    loadSites();
+  }));
+}
+
+$("#siteForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  await req("POST", `${api}/sites`, jsonBody({ site_id: f.get("site_id"), name: f.get("name") }));
+  log(`site ${f.get("site_id")} created`, "ok");
+  e.target.reset();
+  loadSites();
+});
+
+function selectSite(id) {
+  selectedSite = id;
+  $("#sitePanel").hidden = false;
+  for (const s of ["mapSiteLabel", "robotSiteLabel", "locSiteLabel", "jobSiteLabel"])
+    $("#" + s).textContent = id;
+  loadSites();
+  loadSiteDetail();
+  loadLocations();
+  loadJobs();
+}
+
+// ---- maps + robots for selected site ----
+async function loadSiteDetail() {
+  if (!selectedSite) return;
+  const site = await req("GET", `${api}/sites/${selectedSite}`);
+
+  const mt = $("#mapTable tbody");
+  mt.innerHTML = "";
+  const sel = $("#robotForm select[name=map_id]");
+  const locSel = $("#locForm select[name=map_id]");
+  sel.innerHTML = ""; locSel.innerHTML = "";
+  for (const m of site.maps) {
+    const tr = document.createElement("tr");
+    const verBtns = m.versions.map(v =>
+      v.is_active ? `<span class="ok">${v.version}*</span>`
+                  : `<button data-act="${m.map_id}" data-ver="${v.version}">${v.version}</button>`
+    ).join(" ");
+    tr.innerHTML = `<td>${m.map_id}</td><td class="dim">${m.map_uid}</td>` +
+      `<td>${m.active_version || "<span class='warn'>none</span>"}</td><td>${verBtns}</td>` +
+      `<td><button class="danger" data-delmap="${m.map_id}">del</button></td>`;
+    mt.appendChild(tr);
+    sel.appendChild(new Option(m.map_id, m.map_id));
+    locSel.appendChild(new Option(m.map_id, m.map_id));
+  }
+  const jobRobotSel = $("#jobForm select[name=robot_id]");
+  jobRobotSel.innerHTML = `<option value="">(unassigned)</option>`;
+  for (const r of site.robots) jobRobotSel.appendChild(new Option(r.robot_id, r.robot_id));
+  mt.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", async () => {
+    await req("POST", `${api}/sites/${selectedSite}/maps/${b.dataset.act}/activate`,
+              jsonBody({ version: b.dataset.ver }));
+    log(`${b.dataset.act} → activated ${b.dataset.ver}`, "ok");
+    loadSiteDetail();
+  }));
+  mt.querySelectorAll("[data-delmap]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`delete map ${b.dataset.delmap}?`)) return;
+    await req("DELETE", `${api}/sites/${selectedSite}/maps/${b.dataset.delmap}`);
+    log(`map ${b.dataset.delmap} deleted`, "warn");
+    loadSiteDetail();
+  }));
+
+  const rt = $("#robotTable tbody");
+  rt.innerHTML = "";
+  for (const r of site.robots) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.robot_id}</td><td>${r.map_id}</td>` +
+      `<td class="dim">${r.registered_at.slice(0, 19)}</td>` +
+      `<td><button data-re="${r.robot_id}">reassign</button> ` +
+      `<button class="danger" data-delrobot="${r.robot_id}">del</button></td>`;
+    rt.appendChild(tr);
+  }
+  rt.querySelectorAll("[data-re]").forEach(b => b.addEventListener("click", async () => {
+    const map_id = prompt(`reassign ${b.dataset.re} to map_id:`);
+    if (!map_id) return;
+    await req("PUT", `${api}/sites/${selectedSite}/robots/${b.dataset.re}`, jsonBody({ map_id }));
+    log(`${b.dataset.re} → ${map_id}`, "ok");
+    loadSiteDetail();
+  }));
+  rt.querySelectorAll("[data-delrobot]").forEach(b => b.addEventListener("click", async () => {
+    await req("DELETE", `${api}/sites/${selectedSite}/robots/${b.dataset.delrobot}`);
+    log(`robot ${b.dataset.delrobot} unregistered`, "warn");
+    loadSiteDetail();
+  }));
+}
+
+$("#mapForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);   // map_id / despeckle_iterations / files 그대로, activate 는 변환
+  f.set("activate", e.target.activate.checked ? "true" : "false");
+  log(`uploading map ${f.get("map_id")} …`);
+  const res = await req("POST", `${api}/sites/${selectedSite}/maps`, { body: f });
+  log(`map ${res.map_id} v=${res.version} uid=${res.map_uid} created=${res.created} ` +
+      `activated=${res.activated}` + (res.warnings.length ? ` | ${res.warnings.join("; ")}` : ""),
+      res.warnings.length ? "warn" : "ok");
+  e.target.reset();
+  loadSiteDetail(); loadSites();
+});
+
+$("#robotForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const res = await req("POST", `${api}/sites/${selectedSite}/robots`,
+                        jsonBody({ robot_id: f.get("robot_id"), map_id: f.get("map_id") }));
+  log(`robot ${f.get("robot_id")} → ${f.get("map_id")} (set_map_sent=${res.set_map_sent})`, "ok");
+  e.target.reset();
+  loadSiteDetail(); loadSites();
+});
+
+// ---- locations ----
+async function loadLocations() {
+  if (!selectedSite) return;
+  const locs = await req("GET", `${api}/sites/${selectedSite}/locations`);
+  const tb = $("#locTable tbody");
+  tb.innerHTML = "";
+  const tsel = $("#jobForm select[name=target]");
+  tsel.innerHTML = "";
+  for (const l of locs) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${l.name}</td><td>${l.map_id}</td>` +
+      `<td>${l.x.toFixed(2)}, ${l.y.toFixed(2)}, ${l.theta.toFixed(2)}</td><td>${l.type}</td>` +
+      `<td class="warn">${(l.warnings || []).join("; ")}</td>` +
+      `<td><button class="danger" data-delloc="${l.name}">del</button></td>`;
+    tb.appendChild(tr);
+    tsel.appendChild(new Option(`${l.name} (${l.map_id})`, l.name));
+  }
+  if (!locs.length) tb.innerHTML = `<tr><td colspan="6" class="dim">no locations</td></tr>`;
+  tb.querySelectorAll("[data-delloc]").forEach(b => b.addEventListener("click", async () => {
+    await req("DELETE", `${api}/sites/${selectedSite}/locations/${encodeURIComponent(b.dataset.delloc)}`);
+    log(`location ${b.dataset.delloc} deleted`, "warn");
+    loadLocations();
+  }));
+}
+
+$("#locForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const res = await req("POST", `${api}/sites/${selectedSite}/locations`, jsonBody({
+    name: f.get("name"), map_id: f.get("map_id"),
+    x: parseFloat(f.get("x")), y: parseFloat(f.get("y")), theta: parseFloat(f.get("theta") || "0"),
+    type: f.get("type"),
+  }));
+  log(`location ${res.name} @ ${res.map_id}` + (res.warnings.length ? ` | ${res.warnings.join("; ")}` : ""),
+      res.warnings.length ? "warn" : "ok");
+  e.target.reset();
+  loadLocations();
+});
+
+// ---- jobs ----
+async function loadJobs() {
+  if (!selectedSite) return;
+  const jobs = await req("GET", `${api}/sites/${selectedSite}/jobs`);
+  const tb = $("#jobTable tbody");
+  tb.innerHTML = "";
+  const cls = { pending: "", working: "warn", success: "ok", failed: "bad", canceled: "dim" };
+  for (const j of jobs) {
+    const cmds = j.commands.map(c => `${c.type}:${c.target}`).join(" → ");
+    const tr = document.createElement("tr");
+    let btns = `<button class="danger" data-deljob="${j.job_id}">del</button>`;
+    if (j.status === "pending") btns = `<button data-dispatch="${j.job_id}">dispatch</button> ` + btns;
+    if (j.status === "working") btns = `<button data-canceljob="${j.job_id}">cancel</button>`;
+    tr.innerHTML = `<td>${j.job_id}</td><td class="${cls[j.status] || ""}">${j.status}</td>` +
+      `<td>${j.robot_id || "-"}</td><td>${cmds}</td>` +
+      `<td>${j.done_commands}/${j.total_commands}</td><td class="bad">${j.error || ""}</td>` +
+      `<td>${btns}</td>`;
+    tb.appendChild(tr);
+  }
+  if (!jobs.length) tb.innerHTML = `<tr><td colspan="7" class="dim">no jobs</td></tr>`;
+  const call = (attr, verb, path) => tb.querySelectorAll(`[data-${attr}]`).forEach(b =>
+    b.addEventListener("click", async () => {
+      if (attr === "deljob" && !confirm(`delete ${b.dataset[attr]}?`)) return;
+      await req(verb, `${api}/sites/${selectedSite}/jobs/${b.dataset[attr]}${path}`,
+                path ? jsonBody({}) : {});
+      log(`job ${b.dataset[attr]} ${attr}`, "ok");
+      loadJobs();
+    }));
+  call("dispatch", "POST", "/dispatch");
+  call("canceljob", "POST", "/cancel");
+  call("deljob", "DELETE", "");
+}
+
+let jobSteps = [];
+function renderJobSteps() {
+  const el = $("#jobSteps");
+  if (!jobSteps.length) { el.textContent = "경유: (없음)"; return; }
+  el.textContent = "경유: " + jobSteps.join(" → ") + "  ";
+  const clr = document.createElement("button");
+  clr.type = "button"; clr.textContent = "clear";
+  clr.addEventListener("click", () => { jobSteps = []; renderJobSteps(); });
+  el.appendChild(clr);
+}
+$("#jobAddStep").addEventListener("click", () => {
+  const t = $("#jobForm select[name=target]").value;
+  if (t) { jobSteps.push(t); renderJobSteps(); }
+});
+
+$("#jobForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  // "+ 경유지 추가" 안 누르고 바로 Create 하면 현재 선택값 하나로 처리
+  const steps = jobSteps.length ? jobSteps.slice() : (f.get("target") ? [f.get("target")] : []);
+  if (!steps.length) { log("경유지가 없다 (location 을 하나 이상 추가해라)", "bad"); return; }
+  const body = { commands: steps.map(target => ({ type: "move", target })) };
+  if (f.get("robot_id")) body.robot_id = f.get("robot_id");
+  const res = await req("POST", `${api}/sites/${selectedSite}/jobs`, jsonBody(body));
+  log(`job ${res.job_id} created (move: ${steps.join(" → ")})`, "ok");
+  jobSteps = []; renderJobSteps();
+  loadJobs();
+});
+
+// ---- live fleet ----
+async function pollFleet() {
+  let body;
+  try { body = await req("GET", `${api}/robots`); } catch { return; }
+  const tb = $("#fleetTable tbody");
+  tb.innerHTML = "";
+  for (const r of body.robots) {
+    const s = r.state || {};
+    const p = s.pose ? `${s.pose.x.toFixed(2)}, ${s.pose.y.toFixed(2)}` : "-";
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td>${r.robot_id}</td>` +
+      `<td class="${r.liveness === "ONLINE" ? "ok" : "warn"}">${r.liveness}</td>` +
+      `<td>${r.registered}</td>` +
+      `<td>${r.assigned_map_id || "-"}<br><span class="dim">${r.assigned_map_uid || ""}</span></td>` +
+      `<td class="${r.map_synced ? "ok" : "bad"}">${r.map_synced}</td>` +
+      `<td class="${r.available_for_job ? "ok" : "dim"}">${r.available_for_job}</td>` +
+      `<td>${s.state || "-"}${s.sub_state ? "/" + s.sub_state : ""}</td>` +
+      `<td>${p}</td>` +
+      `<td class="dim">${s.map_version || "-"}</td>`;
+    tb.appendChild(tr);
+  }
+  if (!body.robots.length) tb.innerHTML = `<tr><td colspan="9" class="dim">no robots reporting state</td></tr>`;
+}
+
+pollHealth(); loadSites(); pollFleet();
+setInterval(pollHealth, 3000);
+setInterval(pollFleet, 2000);
+setInterval(() => { if (selectedSite) { loadSiteDetail(); loadLocations(); loadJobs(); } }, 5000);
+</script>
+</body>
+</html>
