@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 .env
 # 동봉된 예제 맵은 첫 실행에 필요하므로 제외하지 않는다.
+
+# 실행 중 생성되는 과거 작업 기록은 제출 파일에서 제외한다.
+fms_server/maps/sites/*/jobs.json
