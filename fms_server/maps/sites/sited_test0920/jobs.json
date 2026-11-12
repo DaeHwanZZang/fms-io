@@ -1,5 +1,5 @@
 {
-  "seq": 33,
+  "seq": 32,
   "jobs": {
     "sited_test0920-J0001": {
       "site_id": "sited_test0920",
@@ -1056,49 +1056,6 @@
       "created_at": "2026-10-01T09:43:33.182503+00:00",
       "updated_at": "2026-10-01T09:44:39.857119+00:00",
       "dispatched_at": "2026-10-01T09:44:11.910147+00:00"
-    },
-    "sited_test0920-J0033": {
-      "site_id": "sited_test0920",
-      "commands": [
-        {
-          "type": "move",
-          "target": "P2"
-        },
-        {
-          "type": "wait",
-          "seconds": 5.0
-        },
-        {
-          "type": "move",
-          "target": "P3"
-        },
-        {
-          "type": "wait_flag",
-          "flag": "button",
-          "until": "raised",
-          "hold": 1.0,
-          "timeout": null,
-          "on_timeout": "fail"
-        },
-        {
-          "type": "move",
-          "target": "P1"
-        }
-      ],
-      "status": "success",
-      "robot_id": "AMR-001",
-      "order_id": "sited_test0920-J0033~c4",
-      "order_update_id": 1,
-      "done_commands": 5,
-      "acknowledged": true,
-      "cursor": 5,
-      "order_end": 5,
-      "phase": null,
-      "wait_started": 1790865487.0719533,
-      "error": null,
-      "created_at": "2026-10-01T14:37:44.937259+00:00",
-      "updated_at": "2026-10-01T14:38:28.571434+00:00",
-      "dispatched_at": "2026-10-01T14:37:44.948804+00:00"
     }
   }
 }

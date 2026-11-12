@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
 import pytest
 
@@ -22,7 +21,7 @@ from fms_server.sites import SiteRegistry
 from fms_server.task import JobCoordinator, JobError, JobStatus, JobStore, compile_to_order
 from fms_server.tests.factories import make_state
 
-VENDOR = Path("AMR_client/maps/641931de9eae7cecb34d5765")
+from fms_server.tests.map_fixture import VENDOR
 
 
 def _vendor_files() -> dict[str, bytes]:

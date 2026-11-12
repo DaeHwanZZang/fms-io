@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FMS Control Dashboard</title>
+<title>FMS · Fleet control</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="common.js"></script>
 <style>
@@ -153,15 +153,35 @@
   .jsteps .s.cur { background:var(--info); color:#fff; border-color:var(--info); font-weight:600; }
   .flagrow { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--line); }
   .flagrow b { flex:1; font-weight:600; overflow-wrap:anywhere; }
+  /* 관제 화면: 지도와 상태를 우선하고 조작 요소의 위계를 구분한다. */
+  body { font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif; }
+  header { min-height:58px; padding:10px 20px; }
+  header h1 { font-size:19px; font-weight:700; letter-spacing:-.3px; }
+  .header-subtitle { font-size:13px; color:var(--muted); font-weight:400; margin-left:10px; letter-spacing:0; }
+  .admin-link { color:var(--info); font-size:13px; text-decoration:none; margin-right:8px; }
+  .admin-link:hover { text-decoration:underline; }
+  main { grid-template-columns:minmax(0,1fr) 360px; gap:10px; padding:10px; }
+  section { border-radius:4px; }
+  h2 { color:var(--text); font-size:14px; }
+  .tabs { border-radius:4px; }
+  .tab { border-radius:3px; }
+  .robot, .jobcard, .stepform, .stp { border-radius:4px; }
+  .seg { border-radius:4px; }
+  .seg button { border-radius:3px; }
+  .seg button.on { box-shadow:none; outline:1px solid var(--line); }
+  .badge { border-radius:4px; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--info); outline-offset:3px; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; } .mapwrap { min-height:420px; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>FMS Control Dashboard</h1>
-  <select id="sel-site" title="Site"></select>
-  <select id="sel-map" title="Map"></select>
+  <h1>FMS <span class="header-subtitle">Fleet control</span></h1>
+  <a class="admin-link" href="/">Site setup</a>
+  <select id="sel-site" title="Site" aria-label="Site"></select>
+  <select id="sel-map" title="Map" aria-label="Map"></select>
   <span id="b-fms" class="badge off">FMS disconnected</span>
-  <span id="b-io" class="badge off">Pi simulator offline</span>
+  <span id="b-io" class="badge off">I/O offline</span>
 </header>
 <main>
   <section class="mapwrap">
@@ -215,10 +235,10 @@
         <div class="fld"><label>Robot</label><select id="j-robot"></select></div>
 
         <div class="seg" id="step-types" role="tablist" aria-label="Step type">
-          <button data-type="move" class="on">➜ Move</button>
-          <button data-type="wait">⏱ Wait</button>
-          <button data-type="flag">⚑ Flag</button>
-          <button data-type="pin">⚡ Pin</button>
+          <button data-type="move" class="on">Move</button>
+          <button data-type="wait">Wait</button>
+          <button data-type="flag">Signal</button>
+          <button data-type="pin">Output</button>
         </div>
         <div class="stepform" id="sf-move">
           <div class="hint">Click a destination to add it as a step. You can also click a marker on the map. ✎ edits, ✕ deletes a saved destination.</div>
@@ -245,7 +265,7 @@
               <option value="lamp_red">Tower red</option><option value="lamp_yellow">Tower yellow</option><option value="lamp_green">Tower green</option>
               <option value="buzzer">Buzzer</option></select>
             <select id="o-val" style="max-width:76px"><option value="1">ON</option><option value="0">OFF</option></select>
-            <button id="o-add">Add pin</button></div>
+            <button id="o-add">Add output</button></div>
         </div>
 
         <h3>Steps <span class="cnt" id="step-count"></span></h3>
@@ -266,7 +286,7 @@
     <div class="pane" id="pane-signals" hidden>
       <section>
         <h2>Signal flags</h2>
-        <div class="hint">Set by the Raspberry Pi (PUT /api/v1/flags/{name}). Jobs read them with "Flag" steps.</div>
+        <div class="hint">Device states reported by the Raspberry Pi. Use Signal steps to wait for an input.</div>
         <div id="flags"></div>
         <div class="fld"><input id="f-new" placeholder="new flag name"><button id="f-add">Raise</button></div>
       </section>
@@ -718,7 +738,7 @@ function noteChange(r) {
 function renderRobots() {
   $("#robot-count").textContent = robots.size;
   const box = $("#robots");
-  if (!robots.size) { box.innerHTML = '<div class="empty">No robots reported</div>'; return; }
+  if (!robots.size) { box.innerHTML = '<div class="empty">No robot is sending state. Map and I/O monitoring remain available; connect a robot through MQTT to run jobs.</div>'; return; }
   const followed = cur ? followTarget() : null;
   box.innerHTML = [...robots.values()].sort((a, b) => a.robot_id.localeCompare(b.robot_id)).map((r) => {
     const s = r.state;
@@ -1110,9 +1130,12 @@ setInterval(refreshFlags, 1000); refreshFlags();
 $("#pi-link").href = SERVER_URL + "/";
 if (typeof io === "function") {
   const sock = io(SERVER_URL, { reconnectionDelayMax: 5000 });
-  sock.on("connect", () => { $("#b-io").textContent = "Pi simulator connected"; $("#b-io").className = "badge on"; });
-  sock.on("disconnect", () => { $("#b-io").textContent = "Pi simulator offline"; $("#b-io").className = "badge off"; });
+  sock.on("connect", () => { $("#b-io").textContent = "I/O connected"; $("#b-io").className = "badge on"; });
+  sock.on("connect_error", () => { $("#b-io").textContent = "I/O unavailable · start the I/O server"; $("#b-io").className = "badge off"; });
+  sock.on("disconnect", () => { $("#b-io").textContent = "I/O offline"; $("#b-io").className = "badge off"; });
   sock.on("io_event", (e) => addLog(e.type, `[Pi] ${e.message}`));
+} else {
+  $("#b-io").textContent = "I/O client unavailable · check internet access";
 }
 
 setTab(tab);

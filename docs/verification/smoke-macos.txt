@@ -1,0 +1,9 @@
+macOS / Python 3.14.7 / 2026-11-12
+PASS FMS /health: {"status": "ok", "mqtt_connected": false, "robots_known": 0, "sites": 1, "jobs": 31}
+PASS HTTP 200 http://127.0.0.1:8000/ui/fms.html
+PASS HTTP 200 http://127.0.0.1:5001/
+PASS active map metadata / image / annotations
+PASS I/O POST /api/output -> GPIO mock -> FMS buzzer flag
+PASS buzzer original state restored
+PASS duplicate launch rejected while port 8000 occupied
+PASS Ctrl+C shutdown / ports 8000 and 5001 released

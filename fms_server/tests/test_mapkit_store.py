@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -14,7 +13,7 @@ from common.map_model import MapModel
 from fms_server.mapkit.bake import _polygon_pixel_mask, despeckle_occupied
 from fms_server.mapkit.store import MapStore, MapStoreError, compute_map_uid
 
-VENDOR = Path("AMR_client/maps/641931de9eae7cecb34d5765")
+from fms_server.tests.map_fixture import VENDOR
 MAP_ID = "floor-1"
 SITE_ID = "hq"
 

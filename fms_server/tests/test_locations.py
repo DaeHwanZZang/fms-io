@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 
 from fms_server.locations import LocationError, LocationNotFound
 from fms_server.sites import SiteRegistry
 
-VENDOR = Path("AMR_client/maps/641931de9eae7cecb34d5765")
+from fms_server.tests.map_fixture import VENDOR
 
 
 def _vendor_files() -> dict[str, bytes]:

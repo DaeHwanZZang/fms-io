@@ -1,0 +1,20 @@
+name: Cross-platform tests
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r server/requirements.txt
+      - name: Check launcher syntax
+        run: python -m py_compile run.py
+      - name: Test FMS and I/O
+        run: python -m pytest fms_server/tests server -q

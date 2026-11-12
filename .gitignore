@@ -1,5 +1,7 @@
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
 .DS_Store
-*.log
+.env
+# 동봉된 예제 맵은 첫 실행에 필요하므로 제외하지 않는다.

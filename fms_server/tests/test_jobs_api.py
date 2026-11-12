@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,7 +12,7 @@ from fms_server.sites import SiteRegistry
 from fms_server.task import JobCoordinator, JobStore
 from fms_server.tests.factories import make_state
 
-VENDOR = Path("AMR_client/maps/641931de9eae7cecb34d5765")
+from fms_server.tests.map_fixture import VENDOR
 
 
 def _files():
