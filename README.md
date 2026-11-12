@@ -155,7 +155,7 @@ Windows PowerShell:
 .\.venv\Scripts\python.exe -m pytest fms_server/tests server -q
 ```
 
-검증 결과와 미확인 사항은 [제출 전 점검 보고서](docs/제출전_점검보고서.md)에 기록합니다.
+GitHub Actions에서 macOS·Windows 테스트를 실행합니다. [자동 테스트 결과](https://github.com/DaeHwanZZang/fms-io/actions)를 확인할 수 있습니다. 검증 결과와 미확인 사항은 [제출 전 점검 보고서](docs/제출전_점검보고서.md)에 기록합니다.
 
 ## 문제가 생겼을 때
 
